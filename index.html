@@ -275,6 +275,16 @@ function getTimeInTZ(tz) {
   return { h: h % 12, m, s, h24: h };
 }
 
+function getTzAbbrev(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date());
+    const tzPart = parts.find(p => p.type === 'timeZoneName');
+    return tzPart ? tzPart.value : tz.split('/').pop();
+  } catch {
+    return tz.split('/').pop();
+  }
+}
+
 function dedupeZones(list) {
   const map = new Map();
   for (const z of list) {
@@ -421,21 +431,22 @@ function drawFace(cx, cy, r) {
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Tick marks — skip minute ticks on small viewports
-  for (let i = 0; i < 60; i++) {
-    const isHour = i % 5 === 0;
-    if (isSmall && !isHour) continue;
-    const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
-    const inner = r * (isHour ? 0.82 : 0.88);
-    const outer = r * 0.92;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
-    ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
-    ctx.strokeStyle = isHour
-      ? (light ? '#333' : '#eee')
-      : (light ? '#999' : '#555');
-    ctx.lineWidth = isHour ? 2.5 : 1;
-    ctx.stroke();
+  // Tick marks — none on small viewports
+  if (!isSmall) {
+    for (let i = 0; i < 60; i++) {
+      const isHour = i % 5 === 0;
+      const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      const inner = r * (isHour ? 0.82 : 0.88);
+      const outer = r * 0.92;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+      ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+      ctx.strokeStyle = isHour
+        ? (light ? '#333' : '#eee')
+        : (light ? '#999' : '#555');
+      ctx.lineWidth = isHour ? 2.5 : 1;
+      ctx.stroke();
+    }
   }
 
   // Numerals
@@ -471,7 +482,7 @@ function drawFace(cx, cy, r) {
   ctx.fill();
 }
 
-function drawHand(cx, cy, r, angle, length, width, color, label, labelMode) {
+function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) {
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
 
@@ -510,27 +521,28 @@ function drawHand(cx, cy, r, angle, length, width, color, label, labelMode) {
     ctx.restore();
   }
 
-  // Bezel label — text on the inner rim of the clock, at the hand's angle
+  // Bezel label — TZ abbreviation on inner rim; city name on outer ring (large only)
   if (label && labelMode === 'bezel') {
-    const fs = isSmall ? 8 : 10;
-    const bezelR = r * 0.62; // inner rim, just inside the numerals
+    const light = isLightMode();
+    const tzAbbrev = getTzAbbrev(tz);
+
+    // Inner bezel: TZ abbreviation
+    const fs = isSmall ? 9 : 11;
+    const bezelR = r * 0.62;
     const bx = cx + Math.cos(angle) * bezelR;
     const by = cy + Math.sin(angle) * bezelR;
 
     ctx.save();
     ctx.translate(bx, by);
 
-    // Normalize angle to 0–2π for flip logic
-    let normAngle = ((angle + Math.PI / 2) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    // Flip if on the bottom half (between 3 o'clock and 9 o'clock going down)
-    // Bottom half: angle is between π/2 and 3π/2 (in standard, but our angle is offset by -π/2)
-    // In our coordinate system: angle 0 = 12 o'clock, π/2 = 3, π = 6, 3π/2 = 9
-    // We want to flip when text would be upside-down: when the raw angle puts us on bottom half
-    const rawAngle = angle + Math.PI / 2; // convert back so 0=12
-    const needsFlip = rawAngle > 0 && rawAngle < Math.PI;
+    // Flip at 3 and 9 o'clock: text on the right half of the clock (3→6→9)
+    // needs to be flipped so it reads right-side-up.
+    // Our angle: -π/2 = 12 o'clock, 0 = 3 o'clock, π/2 = 6 o'clock, π = 9 o'clock
+    // Right half (bottom arc from 3 to 9 going clockwise): angle > 0 && angle < π
+    const needsFlip = angle > 0 && angle < Math.PI;
 
     if (needsFlip) {
-      ctx.rotate(angle + Math.PI / 2 + Math.PI); // flip 180
+      ctx.rotate(angle + Math.PI / 2 + Math.PI);
     } else {
       ctx.rotate(angle + Math.PI / 2);
     }
@@ -539,17 +551,37 @@ function drawHand(cx, cy, r, angle, length, width, color, label, labelMode) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Background pill
-    const tw = ctx.measureText(label).width + 6;
+    const tw = ctx.measureText(tzAbbrev).width + 6;
     const th = fs + 3;
-    ctx.fillStyle = isLightMode() ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.55)';
+    ctx.fillStyle = light ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.55)';
     ctx.beginPath();
     ctx.roundRect(-tw / 2, -th / 2, tw, th, 3);
     ctx.fill();
-
     ctx.fillStyle = color;
-    ctx.fillText(label, 0, 0);
+    ctx.fillText(tzAbbrev, 0, 0);
     ctx.restore();
+
+    // Outer ring: city name (large viewports only)
+    if (!isSmall) {
+      const outerFs = 10;
+      const outerR = r + 16;
+      const ox = cx + Math.cos(angle) * outerR;
+      const oy = cy + Math.sin(angle) * outerR;
+
+      ctx.save();
+      ctx.translate(ox, oy);
+      if (needsFlip) {
+        ctx.rotate(angle + Math.PI / 2 + Math.PI);
+      } else {
+        ctx.rotate(angle + Math.PI / 2);
+      }
+      ctx.font = `bold ${outerFs}px "Segoe UI", system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    }
   }
 }
 
@@ -627,7 +659,7 @@ function draw() {
     const t = z._time || getTimeInTZ(z.tz);
     const hVal = use24 ? (t.h24 + t.m / 60) : (t.h + t.m / 60);
     const hourAngle = (hVal / divisor) * Math.PI * 2 - Math.PI / 2;
-    drawHand(cx, cy, r, hourAngle, r * 0.52, handWidth, z.color, z.label, labelMode);
+    drawHand(cx, cy, r, hourAngle, r * 0.52, handWidth, z.color, z.label, z.tz, labelMode);
   }
 
   drawMinuteSecondHands(cx, cy, r);
