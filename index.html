@@ -191,37 +191,37 @@
 // ── CITY CATALOG ────────────────────────────────────────────────────
 // Curated list grouped by region. Covers all major offsets.
 const CITY_CATALOG = [
-  { label: 'Baker Island',   tz: 'Etc/GMT+12' },
-  { label: 'Pago Pago',     tz: 'Pacific/Pago_Pago' },
-  { label: 'Honolulu',      tz: 'Pacific/Honolulu' },
-  { label: 'Anchorage',     tz: 'America/Anchorage' },
-  { label: 'Los Angeles',   tz: 'America/Los_Angeles' },
-  { label: 'Denver',        tz: 'America/Denver' },
-  { label: 'Chicago',       tz: 'America/Chicago' },
-  { label: 'NYC',           tz: 'America/New_York' },
-  { label: 'Halifax',       tz: 'America/Halifax' },
-  { label: 'São Paulo',     tz: 'America/Sao_Paulo' },
-  { label: 'Buenos Aires',  tz: 'America/Argentina/Buenos_Aires' },
-  { label: 'Reykjavik',     tz: 'Atlantic/Reykjavik' },
-  { label: 'London',        tz: 'Europe/London' },
-  { label: 'Paris',         tz: 'Europe/Paris' },
-  { label: 'Berlin',        tz: 'Europe/Berlin' },
-  { label: 'Cairo',         tz: 'Africa/Cairo' },
-  { label: 'Istanbul',      tz: 'Europe/Istanbul' },
-  { label: 'Moscow',        tz: 'Europe/Moscow' },
-  { label: 'Dubai',         tz: 'Asia/Dubai' },
-  { label: 'Karachi',       tz: 'Asia/Karachi' },
-  { label: 'Mumbai',        tz: 'Asia/Kolkata' },
-  { label: 'Kathmandu',     tz: 'Asia/Kathmandu' },
-  { label: 'Dhaka',         tz: 'Asia/Dhaka' },
-  { label: 'Bangkok',       tz: 'Asia/Bangkok' },
-  { label: 'Singapore',     tz: 'Asia/Singapore' },
-  { label: 'Beijing',       tz: 'Asia/Shanghai' },
-  { label: 'Hong Kong',     tz: 'Asia/Hong_Kong' },
-  { label: 'Tokyo',         tz: 'Asia/Tokyo' },
-  { label: 'Seoul',         tz: 'Asia/Seoul' },
-  { label: 'Sydney',        tz: 'Australia/Sydney' },
-  { label: 'Auckland',      tz: 'Pacific/Auckland' },
+  { label: 'Baker Island',  tz: 'Etc/GMT+12',                        lat:   0.19, lon: -176.48 },
+  { label: 'Pago Pago',     tz: 'Pacific/Pago_Pago',                 lat: -14.28, lon: -170.70 },
+  { label: 'Honolulu',      tz: 'Pacific/Honolulu',                  lat:  21.31, lon: -157.86 },
+  { label: 'Anchorage',     tz: 'America/Anchorage',                 lat:  61.22, lon: -149.90 },
+  { label: 'Los Angeles',   tz: 'America/Los_Angeles',               lat:  34.05, lon: -118.24 },
+  { label: 'Denver',        tz: 'America/Denver',                    lat:  39.74, lon: -104.98 },
+  { label: 'Chicago',       tz: 'America/Chicago',                   lat:  41.88, lon:  -87.63 },
+  { label: 'NYC',           tz: 'America/New_York',                  lat:  40.71, lon:  -74.01 },
+  { label: 'Halifax',       tz: 'America/Halifax',                   lat:  44.65, lon:  -63.57 },
+  { label: 'São Paulo',     tz: 'America/Sao_Paulo',                 lat: -23.55, lon:  -46.63 },
+  { label: 'Buenos Aires',  tz: 'America/Argentina/Buenos_Aires',    lat: -34.60, lon:  -58.38 },
+  { label: 'Reykjavik',     tz: 'Atlantic/Reykjavik',                lat:  64.13, lon:  -21.90 },
+  { label: 'London',        tz: 'Europe/London',                     lat:  51.51, lon:   -0.13 },
+  { label: 'Paris',         tz: 'Europe/Paris',                      lat:  48.86, lon:    2.35 },
+  { label: 'Berlin',        tz: 'Europe/Berlin',                     lat:  52.52, lon:   13.41 },
+  { label: 'Cairo',         tz: 'Africa/Cairo',                      lat:  30.04, lon:   31.24 },
+  { label: 'Istanbul',      tz: 'Europe/Istanbul',                   lat:  41.01, lon:   28.98 },
+  { label: 'Moscow',        tz: 'Europe/Moscow',                     lat:  55.76, lon:   37.62 },
+  { label: 'Dubai',         tz: 'Asia/Dubai',                        lat:  25.20, lon:   55.27 },
+  { label: 'Karachi',       tz: 'Asia/Karachi',                      lat:  24.86, lon:   67.01 },
+  { label: 'Mumbai',        tz: 'Asia/Kolkata',                      lat:  19.08, lon:   72.88 },
+  { label: 'Kathmandu',     tz: 'Asia/Kathmandu',                    lat:  27.72, lon:   85.32 },
+  { label: 'Dhaka',         tz: 'Asia/Dhaka',                        lat:  23.81, lon:   90.41 },
+  { label: 'Bangkok',       tz: 'Asia/Bangkok',                      lat:  13.76, lon:  100.50 },
+  { label: 'Singapore',     tz: 'Asia/Singapore',                    lat:   1.35, lon:  103.82 },
+  { label: 'Beijing',       tz: 'Asia/Shanghai',                     lat:  39.90, lon:  116.41 },
+  { label: 'Hong Kong',     tz: 'Asia/Hong_Kong',                    lat:  22.32, lon:  114.17 },
+  { label: 'Tokyo',         tz: 'Asia/Tokyo',                        lat:  35.68, lon:  139.69 },
+  { label: 'Seoul',         tz: 'Asia/Seoul',                        lat:  37.57, lon:  126.98 },
+  { label: 'Sydney',        tz: 'Australia/Sydney',                  lat: -33.87, lon:  151.21 },
+  { label: 'Auckland',      tz: 'Pacific/Auckland',                  lat: -36.85, lon:  174.76 },
 ];
 
 const HAND_COLORS = [
@@ -311,9 +311,55 @@ function darkenColor(hex, factor) {
   return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`;
 }
 
+// ── NOAA simplified sunrise/sunset ──────────────────────────────────
+function getSunTimes(lat, lon) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / 86400000);
+  const D2R = Math.PI / 180;
+  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (now.getUTCHours() - 12) / 24);
+
+  // Equation of time (minutes)
+  const eqTime = 229.18 * (
+    0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma)
+    - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma)
+  );
+
+  // Solar declination (radians)
+  const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+    - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma)
+    - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+  const zenith = 90.833 * D2R;
+  const latRad = lat * D2R;
+  const cosHA = (Math.cos(zenith) / (Math.cos(latRad) * Math.cos(decl)))
+    - Math.tan(latRad) * Math.tan(decl);
+
+  if (cosHA > 1) return { polarNight: true };
+  if (cosHA < -1) return { polarDay: true };
+
+  const ha = Math.acos(cosHA) * (180 / Math.PI);
+  return {
+    sunrise: (720 - 4 * (lon + ha) - eqTime) / 60,  // hours UTC
+    sunset:  (720 - 4 * (lon - ha) - eqTime) / 60,
+  };
+}
+
 function isDaytime(tz) {
-  const t = getTimeInTZ(tz);
-  return t.h24 >= 6 && t.h24 < 18;
+  const city = CITY_CATALOG.find(c => c.tz === tz);
+  if (!city || city.lat == null) {
+    const t = getTimeInTZ(tz);
+    return t.h24 >= 6 && t.h24 < 18;
+  }
+  const sun = getSunTimes(city.lat, city.lon);
+  if (sun.polarDay) return true;
+  if (sun.polarNight) return false;
+
+  const now = new Date();
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+  let sr = ((sun.sunrise % 24) + 24) % 24;
+  let ss = ((sun.sunset  % 24) + 24) % 24;
+  return sr < ss ? (utcH >= sr && utcH < ss) : (utcH >= sr || utcH < ss);
 }
 
 function dedupeZones(list) {
@@ -351,9 +397,11 @@ function renderZoneBar() {
     const idx = zones.findIndex(orig => orig.tz === z.tz);
     const t = z._time || getTimeInTZ(z.tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
+    const dayIcon = isDaytime(z.tz) ? '\u2600' : '\u263E';
     return `<span class="zone-item" role="listitem" data-tz="${z.tz}">
       <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
       <span>${z.label}</span>
+      <span class="zone-daynight" aria-label="${isDaytime(z.tz) ? 'Daytime' : 'Nighttime'}">${dayIcon}</span>
       <span class="zone-time">${timeStr}</span>
       <button class="zone-remove" onclick="removeZone(${idx})" aria-label="Remove ${z.label}">&times;</button>
     </span>`;
@@ -533,11 +581,17 @@ function drawFace(cx, cy, r) {
 function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) {
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
+  const day = tz ? isDaytime(tz) : true;
 
-  // Gradient hand: dark at center → full color at tip
+  // Gradient hand: day = bright (0.55→1.0), night = muted (0.15→0.4)
   const grad = ctx.createLinearGradient(cx, cy, tipX, tipY);
-  grad.addColorStop(0, darkenColor(color, 0.4));
-  grad.addColorStop(1, color);
+  if (day) {
+    grad.addColorStop(0, darkenColor(color, 0.55));
+    grad.addColorStop(1, color);
+  } else {
+    grad.addColorStop(0, darkenColor(color, 0.15));
+    grad.addColorStop(1, darkenColor(color, 0.4));
+  }
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -555,12 +609,11 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
 
   // Sun/moon indicator on 12h clock only
   if (!is24h() && tz) {
-    const day = isDaytime(tz);
     const symbol = day ? '\u2600' : '\u263E';  // ☀ or ☾
     const symR = length * 0.38;
     const sx = cx + Math.cos(angle) * symR;
     const sy = cy + Math.sin(angle) * symR;
-    const symFs = isSmall ? 10 : 13;
+    const symFs = isSmall ? 14 : 18;
     ctx.save();
     ctx.font = `${symFs}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
     ctx.textAlign = 'center';
@@ -656,24 +709,24 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
 }
 
 function drawMinuteSecondHands(cx, cy, r) {
-  if (isSmall) return;
-
   const now = new Date();
   const m = now.getUTCMinutes();
   const s = now.getUTCSeconds();
   const ms = now.getUTCMilliseconds();
   const light = isLightMode();
 
+  // Minute hand — always visible
   const mAngle = ((m + s / 60) / 60) * Math.PI * 2 - Math.PI / 2;
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(cx + Math.cos(mAngle) * r * 0.7, cy + Math.sin(mAngle) * r * 0.7);
   ctx.strokeStyle = light ? '#444' : '#bbb';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = isSmall ? 2 : 3;
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  if (document.getElementById('showSeconds').checked) {
+  // Second hand — hide on small viewports
+  if (!isSmall && document.getElementById('showSeconds').checked) {
     const useSmooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sVal = useSmooth ? (s + ms / 1000) : s;
     const sAngle = (sVal / 60) * Math.PI * 2 - Math.PI / 2;
