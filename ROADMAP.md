@@ -84,11 +84,11 @@ Unlike typical world clock apps that show N separate clock faces, this is **one 
 
 ---
 
-## Open Questions
-- How many timezone hands before it gets unreadable? Probably cap at 5-6.
-- Should the minute/second hands belong to local time or a "primary" zone?
-- Hand label placement — arc along the hand? Legend/key outside the face?
-- Do we want a digital readout alongside each hand (small text near the tip)?
+## Design Decisions
+- **No cap on timezone hands.** It'll get cluttered, but that's the user's choice. If a user adds a city in the same TZ as an existing one, just update the label — don't duplicate the hand.
+- **Single unified minute/second hands.** Minutes align across all TZs anyway. Default to UTC until location services are added (stretch goal).
+- **Label placement: TBD via options.** MVP ships multiple label modes so we can evaluate: (a) text at hand tip, (b) legend/key outside the face, (c) arc along the hand.
+- **Digital readout near hand tip.** Useful for quick reads and debugging. Can be toggled off.
 
 ---
 

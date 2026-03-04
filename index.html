@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-TZ Clock</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  #controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  #controls label {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  #controls select, #controls button {
+    background: #16213e;
+    color: #eee;
+    border: 1px solid #0f3460;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #controls button:hover { background: #0f3460; }
+  canvas { display: block; }
+  #legend {
+    margin-top: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <label>Label mode:
+    <select id="labelMode">
+      <option value="tip">At hand tip</option>
+      <option value="legend">Legend only</option>
+      <option value="arc">Arc along hand</option>
+    </select>
+  </label>
+  <label>
+    <input type="checkbox" id="showDigital" checked>
+    Digital readout
+  </label>
+  <label>
+    <input type="checkbox" id="showSeconds" checked>
+    Second hand
+  </label>
+</div>
+
+<canvas id="clock"></canvas>
+<div id="legend"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────
+// Each zone: { label, tz (IANA), color }
+// Add/remove freely — no cap enforced.
+// If two cities share a TZ, only one hand is drawn with a combined label.
+const DEFAULT_ZONES = [
+  { label: 'NYC',    tz: 'America/New_York',    color: '#e94560' },
+  { label: 'London', tz: 'Europe/London',       color: '#0f3460' },
+  { label: 'Tokyo',  tz: 'Asia/Tokyo',          color: '#53d8fb' },
+  { label: 'Sydney', tz: 'Australia/Sydney',     color: '#e9b44c' },
+];
+
+// ── STATE ───────────────────────────────────────────────────────────
+let zones = [...DEFAULT_ZONES];
+const canvas = document.getElementById('clock');
+const ctx = canvas.getContext('2d');
+
+// ── SIZING ──────────────────────────────────────────────────────────
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(window.innerWidth - 40, window.innerHeight - 200, 600);
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── HELPERS ─────────────────────────────────────────────────────────
+function getTimeInTZ(tz) {
+  const now = new Date();
+  const str = now.toLocaleString('en-US', {
+    timeZone: tz,
+    hour: 'numeric', minute: 'numeric', second: 'numeric',
+    hour12: false
+  });
+  const [h, m, s] = str.split(':').map(Number);
+  return { h: h % 12, m, s, h24: h };
+}
+
+function dedupeZones(list) {
+  // Merge zones with the same current hour offset into one hand with combined label
+  const now = new Date();
+  const map = new Map();
+  for (const z of list) {
+    const t = getTimeInTZ(z.tz);
+    const key = t.h; // same hour = same hand position
+    if (map.has(key)) {
+      const existing = map.get(key);
+      // Append label if not already there
+      if (!existing.label.includes(z.label)) {
+        existing.label += ' / ' + z.label;
+      }
+    } else {
+      map.set(key, { ...z, label: z.label, _time: t });
+    }
+  }
+  return Array.from(map.values());
+}
+
+// ── DRAWING ─────────────────────────────────────────────────────────
+function drawFace(cx, cy, r) {
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#16213e';
+  ctx.fill();
+  ctx.strokeStyle = '#0f3460';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Tick marks
+  for (let i = 0; i < 60; i++) {
+    const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    const isHour = i % 5 === 0;
+    const inner = r * (isHour ? 0.82 : 0.88);
+    const outer = r * 0.92;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+    ctx.strokeStyle = isHour ? '#eee' : '#555';
+    ctx.lineWidth = isHour ? 2.5 : 1;
+    ctx.stroke();
+  }
+
+  // Numerals
+  ctx.fillStyle = '#ccc';
+  ctx.font = `${r * 0.13}px "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let n = 1; n <= 12; n++) {
+    const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
+    const nr = r * 0.72;
+    ctx.fillText(n.toString(), cx + Math.cos(angle) * nr, cy + Math.sin(angle) * nr);
+  }
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#eee';
+  ctx.fill();
+}
+
+function drawHand(cx, cy, angle, length, width, color, label, digitalText, labelMode) {
+  const tipX = cx + Math.cos(angle) * length;
+  const tipY = cy + Math.sin(angle) * length;
+
+  // Shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+
+  // Hand line
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(tipX, tipY);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  // Label at tip
+  if (label && labelMode === 'tip') {
+    const labelR = length + 18;
+    const lx = cx + Math.cos(angle) * labelR;
+    const ly = cy + Math.sin(angle) * labelR;
+    ctx.save();
+    ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, lx, ly);
+    ctx.restore();
+  }
+
+  // Arc label along the hand
+  if (label && labelMode === 'arc') {
+    ctx.save();
+    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = color;
+    const chars = label.split('');
+    const startR = length * 0.45;
+    const charSpacing = 9;
+    for (let i = 0; i < chars.length; i++) {
+      const cr = startR + i * charSpacing;
+      const px = cx + Math.cos(angle) * cr;
+      const py = cy + Math.sin(angle) * cr;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(chars[i], 0, 0);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // Digital readout near tip
+  if (digitalText && document.getElementById('showDigital').checked) {
+    const dr = length - 30;
+    const dx = cx + Math.cos(angle) * dr;
+    const dy = cy + Math.sin(angle) * dr;
+
+    ctx.save();
+    ctx.font = '10px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Background pill for readability
+    const tw = ctx.measureText(digitalText).width + 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.roundRect(dx - tw / 2, dy - 7, tw, 14, 3);
+    ctx.fill();
+
+    ctx.fillStyle = color;
+    ctx.fillText(digitalText, dx, dy);
+    ctx.restore();
+  }
+}
+
+function drawMinuteSecondHands(cx, cy, r) {
+  // Use UTC for min/sec
+  const now = new Date();
+  const m = now.getUTCMinutes();
+  const s = now.getUTCSeconds();
+  const ms = now.getUTCMilliseconds();
+
+  // Minute hand
+  const mAngle = ((m + s / 60) / 60) * Math.PI * 2 - Math.PI / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(mAngle) * r * 0.7, cy + Math.sin(mAngle) * r * 0.7);
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Second hand
+  if (document.getElementById('showSeconds').checked) {
+    const sAngle = ((s + ms / 1000) / 60) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(sAngle) * r * 0.75, cy + Math.sin(sAngle) * r * 0.75);
+    ctx.strokeStyle = '#e94560';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  // Center cap
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#e94560';
+  ctx.fill();
+}
+
+function renderLegend(deduped) {
+  const el = document.getElementById('legend');
+  const mode = document.getElementById('labelMode').value;
+  // Always show legend when in legend mode; in other modes show it too for reference
+  el.innerHTML = deduped.map(z => {
+    const t = getTimeInTZ(z.tz);
+    const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
+    return `<span class="legend-item">
+      <span class="legend-swatch" style="background:${z.color}"></span>
+      ${z.label} <span style="opacity:0.6">${timeStr}</span>
+    </span>`;
+  }).join('');
+}
+
+// ── MAIN LOOP ───────────────────────────────────────────────────────
+function draw() {
+  const size = parseFloat(canvas.style.width);
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 20;
+
+  ctx.clearRect(0, 0, size, size);
+
+  drawFace(cx, cy, r);
+
+  const labelMode = document.getElementById('labelMode').value;
+  const deduped = dedupeZones(zones);
+
+  // Hour hands
+  for (const z of deduped) {
+    const t = z._time || getTimeInTZ(z.tz);
+    const hourAngle = ((t.h + t.m / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+    const digitalStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}:${String(t.s).padStart(2,'0')}`;
+    drawHand(cx, cy, hourAngle, r * 0.52, 5, z.color, z.label, digitalStr, labelMode);
+  }
+
+  drawMinuteSecondHands(cx, cy, r);
+  renderLegend(deduped);
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
