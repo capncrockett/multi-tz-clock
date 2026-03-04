@@ -279,7 +279,9 @@ function getTzAbbrev(tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date());
     const tzPart = parts.find(p => p.type === 'timeZoneName');
-    return tzPart ? tzPart.value : tz.split('/').pop();
+    const raw = tzPart ? tzPart.value : tz.split('/').pop();
+    // Strip offset like +5, -5, +5:30 etc.
+    return raw.replace(/[+-]\d+(:\d+)?$/, '').trim() || raw;
   } catch {
     return tz.split('/').pop();
   }
@@ -452,26 +454,28 @@ function drawFace(cx, cy, r) {
   // Numerals
   const count = use24 ? 24 : 12;
   if (use24) {
-    // 24h: numerals on the OUTER ring, outside tick marks
-    const fontSize = isSmall ? r * 0.09 : r * 0.09;
+    // 24h: numerals on the OUTER ring; on small viewports push to tick area
+    const fontSize = isSmall ? r * 0.12 : r * 0.09;
+    const numR = isSmall ? r * 0.88 : r * 0.96;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let n = 1; n <= 24; n++) {
       const angle = (n / 24) * Math.PI * 2 - Math.PI / 2;
-      ctx.fillText(n.toString(), cx + Math.cos(angle) * r * 0.96, cy + Math.sin(angle) * r * 0.96);
+      ctx.fillText(n.toString(), cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
     }
   } else {
-    // 12h: numerals inside as before
-    const fontSize = isSmall ? r * 0.14 : r * 0.14;
+    // 12h: on small viewports push to outer edge (replacing ticks)
+    const fontSize = isSmall ? r * 0.18 : r * 0.14;
+    const numR = isSmall ? r * 0.85 : r * 0.72;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let n = 1; n <= 12; n++) {
       const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
-      ctx.fillText(n.toString(), cx + Math.cos(angle) * r * 0.72, cy + Math.sin(angle) * r * 0.72);
+      ctx.fillText(n.toString(), cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
     }
   }
 
@@ -505,7 +509,7 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
     const labelR = length + (isSmall ? 12 : 18);
     const lx = cx + Math.cos(angle) * labelR;
     const ly = cy + Math.sin(angle) * labelR;
-    const fs = isSmall ? 9 : 11;
+    const fs = isSmall ? 10 : 11;
     ctx.save();
     ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
@@ -527,7 +531,7 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
     const tzAbbrev = getTzAbbrev(tz);
 
     // Inner bezel: TZ abbreviation
-    const fs = isSmall ? 9 : 11;
+    const fs = isSmall ? 11 : 12;
     const bezelR = r * 0.62;
     const bx = cx + Math.cos(angle) * bezelR;
     const by = cy + Math.sin(angle) * bezelR;
