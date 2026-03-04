@@ -275,15 +275,32 @@ function getTimeInTZ(tz) {
   return { h: h % 12, m, s, h24: h };
 }
 
+// Fallback abbreviations for zones where browsers may return GMT+N
+const TZ_ABBREV_FALLBACK = {
+  'Etc/GMT+12': 'AoE', 'Pacific/Pago_Pago': 'SST', 'Pacific/Honolulu': 'HST',
+  'America/Anchorage': 'AKST', 'America/Los_Angeles': 'PST', 'America/Denver': 'MST',
+  'America/Chicago': 'CST', 'America/New_York': 'EST', 'America/Halifax': 'AST',
+  'America/Sao_Paulo': 'BRT', 'America/Argentina/Buenos_Aires': 'ART',
+  'Atlantic/Reykjavik': 'GMT', 'Europe/London': 'GMT', 'Europe/Paris': 'CET',
+  'Europe/Berlin': 'CET', 'Africa/Cairo': 'EET', 'Europe/Istanbul': 'TRT',
+  'Europe/Moscow': 'MSK', 'Asia/Dubai': 'GST', 'Asia/Karachi': 'PKT',
+  'Asia/Kolkata': 'IST', 'Asia/Kathmandu': 'NPT', 'Asia/Dhaka': 'BDT',
+  'Asia/Bangkok': 'ICT', 'Asia/Singapore': 'SGT', 'Asia/Shanghai': 'CST',
+  'Asia/Hong_Kong': 'HKT', 'Asia/Tokyo': 'JST', 'Asia/Seoul': 'KST',
+  'Australia/Sydney': 'AEST', 'Pacific/Auckland': 'NZST',
+};
+
 function getTzAbbrev(tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date());
     const tzPart = parts.find(p => p.type === 'timeZoneName');
-    const raw = tzPart ? tzPart.value : tz.split('/').pop();
-    // Strip offset like +5, -5, +5:30 etc.
-    return raw.replace(/[+-]\d+(:\d+)?$/, '').trim() || raw;
+    const val = tzPart ? tzPart.value : '';
+    // If browser returned a proper abbreviation (no offset), use it
+    if (val && !/[+-]\d/.test(val)) return val;
+    // Otherwise use fallback map or last segment of IANA name
+    return TZ_ABBREV_FALLBACK[tz] || tz.split('/').pop().replace(/_/g, ' ');
   } catch {
-    return tz.split('/').pop();
+    return TZ_ABBREV_FALLBACK[tz] || tz.split('/').pop().replace(/_/g, ' ');
   }
 }
 
@@ -377,30 +394,30 @@ function drawDayNightFace(cx, cy, r) {
   ctx.fillStyle = nightColor;
   ctx.fill();
 
-  // Day semicircle (top half)
+  // Day semicircle (bottom half — noon/12 is at 6 o'clock on 24h face)
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(cx - r, cy);
-  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.moveTo(cx + r, cy);
+  ctx.arc(cx, cy, r, 0, Math.PI);
   ctx.closePath();
   ctx.clip();
-  const dayGrad = ctx.createRadialGradient(cx, cy - r * 0.3, 0, cx, cy - r * 0.3, r * 1.1);
+  const dayGrad = ctx.createRadialGradient(cx, cy + r * 0.3, 0, cx, cy + r * 0.3, r * 1.1);
   dayGrad.addColorStop(0, dayCenter);
   dayGrad.addColorStop(0.6, dayColor);
   dayGrad.addColorStop(1, midColor);
   ctx.fillStyle = dayGrad;
-  ctx.fillRect(cx - r, cy - r, r * 2, r);
+  ctx.fillRect(cx - r, cy, r * 2, r);
   ctx.restore();
 
-  // Horizon blend
+  // Horizon blend (at 6am/6pm line — the horizontal center)
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
   const horizGrad = ctx.createLinearGradient(cx, cy - 16, cx, cy + 16);
-  horizGrad.addColorStop(0, midColor);
+  horizGrad.addColorStop(0, nightColor);
   horizGrad.addColorStop(0.5, light ? '#ddd0b0' : '#151d18');
-  horizGrad.addColorStop(1, nightColor);
+  horizGrad.addColorStop(1, midColor);
   ctx.fillStyle = horizGrad;
   ctx.fillRect(cx - r, cy - 16, r * 2, 32);
   ctx.restore();
@@ -455,7 +472,7 @@ function drawFace(cx, cy, r) {
   const count = use24 ? 24 : 12;
   if (use24) {
     // 24h: numerals on the OUTER ring; on small viewports push to tick area
-    const fontSize = isSmall ? r * 0.12 : r * 0.09;
+    const fontSize = isSmall ? r * 0.14 : r * 0.09;
     const numR = isSmall ? r * 0.88 : r * 0.96;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
