@@ -330,6 +330,7 @@ function sortByTime(deduped) {
 }
 
 // ── ZONE BAR (merged legend + chips + add) ─────────────────────────
+// Full rebuild — only called when zones array changes
 function renderZoneBar() {
   const bar = document.getElementById('zone-bar');
   const sorted = sortByTime(zones.map(z => ({ ...z, _time: getTimeInTZ(z.tz) })));
@@ -338,7 +339,7 @@ function renderZoneBar() {
     const idx = zones.findIndex(orig => orig.tz === z.tz);
     const t = z._time || getTimeInTZ(z.tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
-    return `<span class="zone-item" role="listitem">
+    return `<span class="zone-item" role="listitem" data-tz="${z.tz}">
       <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
       <span>${z.label}</span>
       <span class="zone-time">${timeStr}</span>
@@ -360,6 +361,20 @@ function renderZoneBar() {
 
   const sel = document.getElementById('addTzSelect');
   if (sel) sel.addEventListener('change', () => { if (sel.value) addZone(sel.value); });
+}
+
+// Lightweight update — only refreshes time strings, called each frame
+function updateZoneBarTimes() {
+  const items = document.querySelectorAll('.zone-item[data-tz]');
+  for (const item of items) {
+    const tz = item.dataset.tz;
+    const t = getTimeInTZ(tz);
+    const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
+    const timeEl = item.querySelector('.zone-time');
+    if (timeEl && timeEl.textContent !== timeStr) {
+      timeEl.textContent = timeStr;
+    }
+  }
 }
 
 function addZone(tz) {
@@ -684,7 +699,7 @@ function draw() {
   }
 
   drawMinuteSecondHands(cx, cy, r);
-  renderZoneBar();
+  updateZoneBarTimes();
   updateScreenReader(deduped);
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
