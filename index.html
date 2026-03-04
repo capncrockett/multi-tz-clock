@@ -48,58 +48,32 @@
   }
   .skip-link:focus { top: 0; }
 
-  .settings-wrap {
-    position: relative;
-    margin-bottom: 10px;
-  }
-  .settings-btn {
-    background: var(--bg-surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .settings-btn:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  .settings-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
+  #controls {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 50;
-    min-width: 190px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
   }
-  .settings-panel label {
+  #controls label {
     font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: pointer;
   }
-  .settings-panel select {
+  #controls select {
     background: var(--bg-surface);
     color: var(--text);
     border: 1px solid var(--border);
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
     font-size: 13px;
     cursor: pointer;
   }
-  .settings-panel select:focus,
-  .settings-panel input:focus {
+  #controls select:focus,
+  #controls input:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
@@ -125,7 +99,7 @@
     border-radius: 16px;
     padding: 4px 10px 4px 8px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     white-space: nowrap;
   }
   .zone-swatch {
@@ -160,7 +134,7 @@
   .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 400;
   }
   .zone-remove {
     background: none; border: none;
@@ -199,7 +173,8 @@
   }
 
   @media (max-width: 400px) {
-    .settings-panel { min-width: 160px; }
+    #controls { gap: 6px; }
+    #controls label { font-size: 12px; }
     #zone-bar {
       flex-direction: column;
       align-items: center;
@@ -212,20 +187,17 @@
 
 <a class="skip-link" href="#zone-bar">Skip to time zones</a>
 
-<div class="settings-wrap">
-  <button id="settingsBtn" class="settings-btn" aria-expanded="false" aria-controls="settingsPanel">Options ▾</button>
-  <div id="settingsPanel" class="settings-panel" role="group" aria-label="Clock display options" hidden>
-    <label>Labels:
-      <select id="labelMode" aria-label="Label display mode">
-        <option value="tip">At hand tip</option>
-        <option value="bezel">On bezel</option>
-        <option value="legend">Legend only</option>
-      </select>
-    </label>
-    <label><input type="checkbox" id="showSeconds" checked> Seconds</label>
-    <label><input type="checkbox" id="use24h"> 24-hour</label>
-    <label><input type="checkbox" id="showSunMoon" checked> Sun / Moon</label>
-  </div>
+<div id="controls" role="toolbar" aria-label="Clock display options">
+  <label>Labels:
+    <select id="labelMode" aria-label="Label display mode">
+      <option value="tip">At hand tip</option>
+      <option value="bezel">On bezel</option>
+      <option value="legend">Legend only</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="showSeconds" checked> Sec</label>
+  <label><input type="checkbox" id="use24h"> 24h</label>
+  <label><input type="checkbox" id="showSunMoon" checked> ☀/☾</label>
 </div>
 
 <canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
@@ -501,26 +473,7 @@ window.removeZone = removeZone;
 
 renderZoneBar();
 
-// ── SETTINGS DROPDOWN ─────────────────────────────────────────
-document.getElementById('settingsBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const panel = document.getElementById('settingsPanel');
-  const btn = document.getElementById('settingsBtn');
-  const open = !panel.hidden;
-  panel.hidden = open;
-  btn.setAttribute('aria-expanded', !open);
-});
-// Close when clicking outside
-document.addEventListener('click', (e) => {
-  const wrap = document.querySelector('.settings-wrap');
-  const panel = document.getElementById('settingsPanel');
-  if (!wrap.contains(e.target) && !panel.hidden) {
-    panel.hidden = true;
-    document.getElementById('settingsBtn').setAttribute('aria-expanded', 'false');
-  }
-});
-
-// ── DAY/NIGHT CLOCK FACE (24h only) ─────────────────────────
+// ── DAY/NIGHT CLOCK FACE (24h only) ─────────────────────
 function drawDayNightFace(cx, cy, r) {
   const light = isLightMode();
   const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
@@ -664,22 +617,6 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
   ctx.stroke();
   ctx.restore();
 
-  // Sun/moon indicator on 12h clock (optional)
-  if (!is24h() && tz && document.getElementById('showSunMoon').checked) {
-    const symbol = day ? '\u2600' : '\u263E';  // ☀ or ☾
-    const symR = length * 0.38;
-    const sx = cx + Math.cos(angle) * symR;
-    const sy = cy + Math.sin(angle) * symR;
-    const symFs = isSmall ? 14 : 18;
-    ctx.save();
-    ctx.font = `${symFs}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = day ? '#f0c040' : '#c0c8e0';
-    ctx.fillText(symbol, sx, sy);
-    ctx.restore();
-  }
-
   // Tip label
   if (label && labelMode === 'tip') {
     const labelR = length + (isSmall ? 12 : 18);
@@ -706,7 +643,9 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
     const light = isLightMode();
     const tzAbbrev = getTzAbbrev(tz);
 
-    // Inner bezel: TZ abbreviation
+    // Inner bezel: TZ abbreviation + optional sun/moon
+    const showSM = document.getElementById('showSunMoon').checked;
+    const bezelText = showSM ? (day ? '\u2600 ' : '\u263E ') + tzAbbrev : tzAbbrev;
     const fs = isSmall ? 11 : 12;
     const bezelR = r * 0.62;
     const bx = cx + Math.cos(angle) * bezelR;
@@ -715,12 +654,7 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
     ctx.save();
     ctx.translate(bx, by);
 
-    // Flip at 3 and 9 o'clock: text on the right half of the clock (3→6→9)
-    // needs to be flipped so it reads right-side-up.
-    // Our angle: -π/2 = 12 o'clock, 0 = 3 o'clock, π/2 = 6 o'clock, π = 9 o'clock
-    // Right half (bottom arc from 3 to 9 going clockwise): angle > 0 && angle < π
     const needsFlip = angle > 0 && angle < Math.PI;
-
     if (needsFlip) {
       ctx.rotate(angle + Math.PI / 2 + Math.PI);
     } else {
@@ -731,14 +665,14 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const tw = ctx.measureText(tzAbbrev).width + 6;
+    const tw = ctx.measureText(bezelText).width + 6;
     const th = fs + 3;
     ctx.fillStyle = light ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.55)';
     ctx.beginPath();
     ctx.roundRect(-tw / 2, -th / 2, tw, th, 3);
     ctx.fill();
     ctx.fillStyle = color;
-    ctx.fillText(tzAbbrev, 0, 0);
+    ctx.fillText(bezelText, 0, 0);
     ctx.restore();
 
     // Outer ring: city name (large viewports only)
