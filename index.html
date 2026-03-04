@@ -63,7 +63,7 @@
     gap: 4px;
     cursor: pointer;
   }
-  #controls select, #controls button {
+  #controls select {
     background: var(--bg-surface);
     color: var(--text);
     border: 1px solid var(--border);
@@ -72,102 +72,72 @@
     font-size: 13px;
     cursor: pointer;
   }
-  #controls button:hover { filter: brightness(1.2); }
   #controls select:focus,
-  #controls input:focus,
-  #controls button:focus {
+  #controls input:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-  }
-
-  /* ── TZ picker ── */
-  #tz-bar {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-  }
-  #tz-bar select {
-    background: var(--bg-surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 13px;
-    max-width: 220px;
-  }
-  #tz-bar button {
-    background: var(--bg-surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  #tz-bar button:hover { filter: brightness(1.2); }
-  #tz-bar button:focus, #tz-bar select:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  .tz-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2px 8px 2px 4px;
-    font-size: 12px;
-  }
-  .tz-chip-swatch {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .tz-chip button {
-    background: none; border: none;
-    color: var(--text-muted);
-    cursor: pointer; font-size: 14px;
-    padding: 0 2px;
-    line-height: 1;
-  }
-  .tz-chip button:hover { color: var(--accent); }
-  .tz-chip button:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
   }
 
   canvas { display: block; }
 
-  #legend {
+  /* ── Unified zone bar (legend + chips + add) ── */
+  #zone-bar {
     margin-top: 12px;
     display: flex;
-    gap: 12px 20px;
+    gap: 8px;
     flex-wrap: wrap;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 600;
-    max-width: 600px;
-  }
-  .legend-item {
-    display: flex;
     align-items: center;
-    gap: 6px;
+    max-width: 640px;
+  }
+  .zone-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 6px 3px 6px;
+    font-size: 13px;
+    font-weight: 600;
     white-space: nowrap;
   }
-  .legend-swatch {
-    width: 14px; height: 14px;
+  .zone-swatch {
+    width: 12px; height: 12px;
     border-radius: 50%;
     border: 2px solid var(--text-muted);
     flex-shrink: 0;
   }
-  .legend-time {
+  .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
     opacity: 0.75;
+    font-size: 12px;
+  }
+  .zone-remove {
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer; font-size: 15px;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .zone-remove:hover { color: var(--accent); }
+  .zone-remove:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  #zone-bar select {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 16px;
     font-size: 13px;
+    cursor: pointer;
+    max-width: 180px;
+  }
+  #zone-bar select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .sr-only {
@@ -182,25 +152,23 @@
   @media (max-width: 400px) {
     #controls { gap: 6px; }
     #controls label { font-size: 12px; }
-    #tz-bar { gap: 4px; }
-    #legend {
+    #zone-bar {
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
+      gap: 5px;
     }
   }
 </style>
 </head>
 <body>
 
-<a class="skip-link" href="#legend">Skip to time legend</a>
+<a class="skip-link" href="#zone-bar">Skip to time zones</a>
 
 <div id="controls" role="toolbar" aria-label="Clock display options">
   <label>Labels:
     <select id="labelMode" aria-label="Label display mode">
       <option value="tip">At hand tip</option>
-      <option value="arc">Arc along hand</option>
+      <option value="bezel">On bezel</option>
       <option value="legend">Legend only</option>
     </select>
   </label>
@@ -214,12 +182,10 @@
   </label>
 </div>
 
-<div id="tz-bar" role="region" aria-label="Time zone selection"></div>
-
 <canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
 
 <div id="sr-times" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-<div id="legend" role="list" tabindex="0" aria-label="Time zone legend"></div>
+<div id="zone-bar" role="list" aria-label="Active time zones"></div>
 
 <script>
 // ── CITY CATALOG ────────────────────────────────────────────────────
@@ -334,68 +300,60 @@ function sortByTime(deduped) {
   });
 }
 
-// ── TZ PICKER ───────────────────────────────────────────────────────
-function renderTzBar() {
-  const bar = document.getElementById('tz-bar');
-  // Chips for active zones
-  let html = zones.map((z, i) => `
-    <span class="tz-chip">
-      <span class="tz-chip-swatch" style="background:${z.color}" aria-hidden="true"></span>
-      ${z.label}
-      <button onclick="removeZone(${i})" aria-label="Remove ${z.label}">&times;</button>
-    </span>
-  `).join('');
+// ── ZONE BAR (merged legend + chips + add) ─────────────────────────
+function renderZoneBar() {
+  const bar = document.getElementById('zone-bar');
+  const sorted = sortByTime(zones.map(z => ({ ...z, _time: getTimeInTZ(z.tz) })));
 
-  // Add dropdown (if under cap)
+  let html = sorted.map(z => {
+    const idx = zones.findIndex(orig => orig.tz === z.tz);
+    const t = z._time || getTimeInTZ(z.tz);
+    const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
+    return `<span class="zone-item" role="listitem">
+      <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
+      <span>${z.label}</span>
+      <span class="zone-time">${timeStr}</span>
+      <button class="zone-remove" onclick="removeZone(${idx})" aria-label="Remove ${z.label}">&times;</button>
+    </span>`;
+  }).join('');
+
   if (zones.length < MAX_ZONES) {
     const usedTzs = new Set(zones.map(z => z.tz));
     const opts = CITY_CATALOG
       .filter(c => !usedTzs.has(c.tz))
       .map(c => `<option value="${c.tz}">${c.label}</option>`)
       .join('');
-    html += `
-      <select id="addTzSelect" aria-label="Add a time zone">
-        <option value="">+ Add city…</option>
-        ${opts}
-      </select>
-    `;
+    html += `<select id="addTzSelect" aria-label="Add a time zone">
+      <option value="">+ Add…</option>${opts}
+    </select>`;
   }
   bar.innerHTML = html;
 
-  // Bind change
   const sel = document.getElementById('addTzSelect');
-  if (sel) {
-    sel.addEventListener('change', () => {
-      if (!sel.value) return;
-      addZone(sel.value);
-    });
-  }
+  if (sel) sel.addEventListener('change', () => { if (sel.value) addZone(sel.value); });
 }
 
 function addZone(tz) {
   if (zones.length >= MAX_ZONES) return;
   const city = CITY_CATALOG.find(c => c.tz === tz);
   if (!city) return;
-  // Pick next unused color
   const usedColors = new Set(zones.map(z => z.color));
   const color = HAND_COLORS.find(c => !usedColors.has(c)) || HAND_COLORS[zones.length % HAND_COLORS.length];
   zones.push({ label: city.label, tz: city.tz, color });
-  renderTzBar();
+  renderZoneBar();
 }
 
 function removeZone(index) {
   zones.splice(index, 1);
-  renderTzBar();
+  renderZoneBar();
 }
-// Expose to inline onclick
 window.removeZone = removeZone;
 
-renderTzBar();
+renderZoneBar();
 
-// ── DAY/NIGHT CLOCK FACE ────────────────────────────────────────────
+// ── DAY/NIGHT CLOCK FACE (24h only) ───────────────────────────────
 function drawDayNightFace(cx, cy, r) {
   const light = isLightMode();
-  // Warmer, sunnier day colors
   const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
   const dayCenter  = light ? '#fdf0d5' : '#3d4a28';
   const nightColor = light ? '#d0cfc8' : '#0d1321';
@@ -407,7 +365,7 @@ function drawDayNightFace(cx, cy, r) {
   ctx.fillStyle = nightColor;
   ctx.fill();
 
-  // Day semicircle (top half) with radial warm gradient
+  // Day semicircle (top half)
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(cx - r, cy);
@@ -422,7 +380,7 @@ function drawDayNightFace(cx, cy, r) {
   ctx.fillRect(cx - r, cy - r, r * 2, r);
   ctx.restore();
 
-  // Soft horizon blend
+  // Horizon blend
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -434,6 +392,27 @@ function drawDayNightFace(cx, cy, r) {
   ctx.fillStyle = horizGrad;
   ctx.fillRect(cx - r, cy - 16, r * 2, 32);
   ctx.restore();
+}
+
+function drawPlainFace(cx, cy, r) {
+  const light = isLightMode();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = light ? '#ebe8e0' : '#16213e';
+  ctx.fill();
+}
+
+// ── DRAWING ─────────────────────────────────────────────────────────
+function drawFace(cx, cy, r) {
+  const use24 = is24h();
+  const light = isLightMode();
+
+  // Background: day/night for 24h, plain for 12h
+  if (use24) {
+    drawDayNightFace(cx, cy, r);
+  } else {
+    drawPlainFace(cx, cy, r);
+  }
 
   // Outer ring
   ctx.beginPath();
@@ -441,13 +420,6 @@ function drawDayNightFace(cx, cy, r) {
   ctx.strokeStyle = light ? '#b0b0b8' : '#0f3460';
   ctx.lineWidth = 3;
   ctx.stroke();
-}
-
-// ── DRAWING ─────────────────────────────────────────────────────────
-function drawFace(cx, cy, r) {
-  drawDayNightFace(cx, cy, r);
-  const light = isLightMode();
-  const use24 = is24h();
 
   // Tick marks — skip minute ticks on small viewports
   for (let i = 0; i < 60; i++) {
@@ -468,15 +440,28 @@ function drawFace(cx, cy, r) {
 
   // Numerals
   const count = use24 ? 24 : 12;
-  const fontSize = isSmall ? r * 0.14 : (use24 ? r * 0.10 : r * 0.14);
-  ctx.fillStyle = light ? '#222' : '#ddd';
-  ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (let n = 1; n <= count; n++) {
-    const angle = (n / count) * Math.PI * 2 - Math.PI / 2;
-    const nr = use24 ? r * 0.68 : r * 0.72;
-    ctx.fillText(n.toString(), cx + Math.cos(angle) * nr, cy + Math.sin(angle) * nr);
+  if (use24) {
+    // 24h: numerals on the OUTER ring, outside tick marks
+    const fontSize = isSmall ? r * 0.09 : r * 0.09;
+    ctx.fillStyle = light ? '#222' : '#ddd';
+    ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let n = 1; n <= 24; n++) {
+      const angle = (n / 24) * Math.PI * 2 - Math.PI / 2;
+      ctx.fillText(n.toString(), cx + Math.cos(angle) * r * 0.96, cy + Math.sin(angle) * r * 0.96);
+    }
+  } else {
+    // 12h: numerals inside as before
+    const fontSize = isSmall ? r * 0.14 : r * 0.14;
+    ctx.fillStyle = light ? '#222' : '#ddd';
+    ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let n = 1; n <= 12; n++) {
+      const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
+      ctx.fillText(n.toString(), cx + Math.cos(angle) * r * 0.72, cy + Math.sin(angle) * r * 0.72);
+    }
   }
 
   // Center dot
@@ -486,7 +471,7 @@ function drawFace(cx, cy, r) {
   ctx.fill();
 }
 
-function drawHand(cx, cy, angle, length, width, color, label, labelMode) {
+function drawHand(cx, cy, r, angle, length, width, color, label, labelMode) {
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
 
@@ -525,32 +510,45 @@ function drawHand(cx, cy, angle, length, width, color, label, labelMode) {
     ctx.restore();
   }
 
-  // Arc label along the hand
-  if (label && labelMode === 'arc') {
+  // Bezel label — text on the inner rim of the clock, at the hand's angle
+  if (label && labelMode === 'bezel') {
     const fs = isSmall ? 8 : 10;
+    const bezelR = r * 0.62; // inner rim, just inside the numerals
+    const bx = cx + Math.cos(angle) * bezelR;
+    const by = cy + Math.sin(angle) * bezelR;
+
     ctx.save();
-    ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
-    const chars = label.split('');
-    const charSpacing = fs * 0.9;
-    const totalLen = chars.length * charSpacing;
-    const startR = Math.max(length * 0.3, length - totalLen - 10);
-    for (let i = 0; i < chars.length; i++) {
-      const cr = startR + i * charSpacing;
-      if (cr > length) break;
-      const px = cx + Math.cos(angle) * cr;
-      const py = cy + Math.sin(angle) * cr;
-      // Background for each char
-      ctx.fillStyle = isLightMode() ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)';
-      ctx.fillRect(px - fs * 0.4, py - fs * 0.55, fs * 0.8, fs * 1.1);
-      ctx.fillStyle = color;
-      ctx.save();
-      ctx.translate(px, py);
+    ctx.translate(bx, by);
+
+    // Normalize angle to 0–2π for flip logic
+    let normAngle = ((angle + Math.PI / 2) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    // Flip if on the bottom half (between 3 o'clock and 9 o'clock going down)
+    // Bottom half: angle is between π/2 and 3π/2 (in standard, but our angle is offset by -π/2)
+    // In our coordinate system: angle 0 = 12 o'clock, π/2 = 3, π = 6, 3π/2 = 9
+    // We want to flip when text would be upside-down: when the raw angle puts us on bottom half
+    const rawAngle = angle + Math.PI / 2; // convert back so 0=12
+    const needsFlip = rawAngle > 0 && rawAngle < Math.PI;
+
+    if (needsFlip) {
+      ctx.rotate(angle + Math.PI / 2 + Math.PI); // flip 180
+    } else {
       ctx.rotate(angle + Math.PI / 2);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(chars[i], 0, 0);
-      ctx.restore();
     }
+
+    ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Background pill
+    const tw = ctx.measureText(label).width + 6;
+    const th = fs + 3;
+    ctx.fillStyle = isLightMode() ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.roundRect(-tw / 2, -th / 2, tw, th, 3);
+    ctx.fill();
+
+    ctx.fillStyle = color;
+    ctx.fillText(label, 0, 0);
     ctx.restore();
   }
 }
@@ -592,19 +590,7 @@ function drawMinuteSecondHands(cx, cy, r) {
   ctx.fill();
 }
 
-function renderLegend(deduped) {
-  const sorted = sortByTime(deduped);
-  const el = document.getElementById('legend');
-  el.innerHTML = sorted.map(z => {
-    const t = getTimeInTZ(z.tz);
-    const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
-    return `<span class="legend-item" role="listitem">
-      <span class="legend-swatch" style="background:${z.color}" aria-hidden="true"></span>
-      <span>${z.label}</span>
-      <span class="legend-time">${timeStr}</span>
-    </span>`;
-  }).join('');
-}
+// Legend is now part of the zone bar — no separate render needed
 
 // ── SCREEN READER ───────────────────────────────────────────────────
 function updateScreenReader(deduped) {
@@ -641,11 +627,11 @@ function draw() {
     const t = z._time || getTimeInTZ(z.tz);
     const hVal = use24 ? (t.h24 + t.m / 60) : (t.h + t.m / 60);
     const hourAngle = (hVal / divisor) * Math.PI * 2 - Math.PI / 2;
-    drawHand(cx, cy, hourAngle, r * 0.52, handWidth, z.color, z.label, labelMode);
+    drawHand(cx, cy, r, hourAngle, r * 0.52, handWidth, z.color, z.label, labelMode);
   }
 
   drawMinuteSecondHands(cx, cy, r);
-  renderLegend(deduped);
+  renderZoneBar();
   updateScreenReader(deduped);
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
