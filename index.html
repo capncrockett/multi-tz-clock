@@ -38,25 +38,20 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
 
-  /* ── Skip link for keyboard nav ── */
   .skip-link {
     position: absolute;
-    top: -100px;
-    left: 0;
-    background: var(--accent);
-    color: #fff;
-    padding: 8px 16px;
-    z-index: 100;
-    font-size: 14px;
-    text-decoration: none;
+    top: -100px; left: 0;
+    background: var(--accent); color: #fff;
+    padding: 8px 16px; z-index: 100;
+    font-size: 14px; text-decoration: none;
     border-radius: 0 0 4px 0;
   }
   .skip-link:focus { top: 0; }
 
   #controls {
     display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
@@ -68,7 +63,7 @@
     gap: 4px;
     cursor: pointer;
   }
-  #controls select {
+  #controls select, #controls button {
     background: var(--bg-surface);
     color: var(--text);
     border: 1px solid var(--border);
@@ -77,10 +72,72 @@
     font-size: 13px;
     cursor: pointer;
   }
+  #controls button:hover { filter: brightness(1.2); }
   #controls select:focus,
-  #controls input:focus {
+  #controls input:focus,
+  #controls button:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  /* ── TZ picker ── */
+  #tz-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  #tz-bar select {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    max-width: 220px;
+  }
+  #tz-bar button {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #tz-bar button:hover { filter: brightness(1.2); }
+  #tz-bar button:focus, #tz-bar select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .tz-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 8px 2px 4px;
+    font-size: 12px;
+  }
+  .tz-chip-swatch {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tz-chip button {
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer; font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .tz-chip button:hover { color: var(--accent); }
+  .tz-chip button:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
 
   canvas { display: block; }
@@ -102,8 +159,7 @@
     white-space: nowrap;
   }
   .legend-swatch {
-    width: 14px;
-    height: 14px;
+    width: 14px; height: 14px;
     border-radius: 50%;
     border: 2px solid var(--text-muted);
     flex-shrink: 0;
@@ -114,7 +170,6 @@
     font-size: 13px;
   }
 
-  /* Screen reader only */
   .sr-only {
     position: absolute;
     width: 1px; height: 1px;
@@ -124,10 +179,10 @@
     white-space: nowrap; border: 0;
   }
 
-  /* Small viewports */
   @media (max-width: 400px) {
-    #controls { gap: 8px; }
+    #controls { gap: 6px; }
     #controls label { font-size: 12px; }
+    #tz-bar { gap: 4px; }
     #legend {
       flex-direction: column;
       align-items: center;
@@ -142,36 +197,80 @@
 <a class="skip-link" href="#legend">Skip to time legend</a>
 
 <div id="controls" role="toolbar" aria-label="Clock display options">
-  <label>Label mode:
+  <label>Labels:
     <select id="labelMode" aria-label="Label display mode">
       <option value="tip">At hand tip</option>
+      <option value="arc">Arc along hand</option>
       <option value="legend">Legend only</option>
     </select>
   </label>
   <label>
     <input type="checkbox" id="showSeconds" checked aria-label="Toggle second hand">
-    Second hand
+    Seconds
+  </label>
+  <label>
+    <input type="checkbox" id="use24h" aria-label="Toggle 24-hour clock">
+    24h
   </label>
 </div>
 
+<div id="tz-bar" role="region" aria-label="Time zone selection"></div>
+
 <canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
 
-<!-- Screen reader live region: updated each minute -->
 <div id="sr-times" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-
 <div id="legend" role="list" tabindex="0" aria-label="Time zone legend"></div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────
-const DEFAULT_ZONES = [
-  { label: 'NYC',    tz: 'America/New_York',    color: '#e94560' },
-  { label: 'London', tz: 'Europe/London',       color: '#4e9af1' },
-  { label: 'Tokyo',  tz: 'Asia/Tokyo',          color: '#53d8fb' },
-  { label: 'Sydney', tz: 'Australia/Sydney',     color: '#e9b44c' },
+// ── CITY CATALOG ────────────────────────────────────────────────────
+// Curated list grouped by region. Covers all major offsets.
+const CITY_CATALOG = [
+  { label: 'Baker Island',   tz: 'Etc/GMT+12' },
+  { label: 'Pago Pago',     tz: 'Pacific/Pago_Pago' },
+  { label: 'Honolulu',      tz: 'Pacific/Honolulu' },
+  { label: 'Anchorage',     tz: 'America/Anchorage' },
+  { label: 'Los Angeles',   tz: 'America/Los_Angeles' },
+  { label: 'Denver',        tz: 'America/Denver' },
+  { label: 'Chicago',       tz: 'America/Chicago' },
+  { label: 'NYC',           tz: 'America/New_York' },
+  { label: 'Halifax',       tz: 'America/Halifax' },
+  { label: 'São Paulo',     tz: 'America/Sao_Paulo' },
+  { label: 'Buenos Aires',  tz: 'America/Argentina/Buenos_Aires' },
+  { label: 'Reykjavik',     tz: 'Atlantic/Reykjavik' },
+  { label: 'London',        tz: 'Europe/London' },
+  { label: 'Paris',         tz: 'Europe/Paris' },
+  { label: 'Berlin',        tz: 'Europe/Berlin' },
+  { label: 'Cairo',         tz: 'Africa/Cairo' },
+  { label: 'Istanbul',      tz: 'Europe/Istanbul' },
+  { label: 'Moscow',        tz: 'Europe/Moscow' },
+  { label: 'Dubai',         tz: 'Asia/Dubai' },
+  { label: 'Karachi',       tz: 'Asia/Karachi' },
+  { label: 'Mumbai',        tz: 'Asia/Kolkata' },
+  { label: 'Kathmandu',     tz: 'Asia/Kathmandu' },
+  { label: 'Dhaka',         tz: 'Asia/Dhaka' },
+  { label: 'Bangkok',       tz: 'Asia/Bangkok' },
+  { label: 'Singapore',     tz: 'Asia/Singapore' },
+  { label: 'Beijing',       tz: 'Asia/Shanghai' },
+  { label: 'Hong Kong',     tz: 'Asia/Hong_Kong' },
+  { label: 'Tokyo',         tz: 'Asia/Tokyo' },
+  { label: 'Seoul',         tz: 'Asia/Seoul' },
+  { label: 'Sydney',        tz: 'Australia/Sydney' },
+  { label: 'Auckland',      tz: 'Pacific/Auckland' },
 ];
 
+const HAND_COLORS = [
+  '#e94560', '#4e9af1', '#53d8fb', '#e9b44c', '#2ecc71', '#e67e22',
+];
+const MAX_ZONES = 6;
+
 // ── STATE ───────────────────────────────────────────────────────────
-let zones = [...DEFAULT_ZONES];
+let zones = [
+  { label: 'NYC',    tz: 'America/New_York',    color: HAND_COLORS[0] },
+  { label: 'London', tz: 'Europe/London',       color: HAND_COLORS[1] },
+  { label: 'Tokyo',  tz: 'Asia/Tokyo',          color: HAND_COLORS[2] },
+  { label: 'Sydney', tz: 'Australia/Sydney',     color: HAND_COLORS[3] },
+];
+
 const canvas = document.getElementById('clock');
 const ctx = canvas.getContext('2d');
 let isSmall = false;
@@ -180,11 +279,14 @@ let lastSrUpdate = -1;
 function isLightMode() {
   return window.matchMedia('(prefers-color-scheme: light)').matches;
 }
+function is24h() {
+  return document.getElementById('use24h').checked;
+}
 
 // ── SIZING ──────────────────────────────────────────────────────────
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(window.innerWidth - 32, window.innerHeight - 180, 600);
+  const size = Math.min(window.innerWidth - 32, window.innerHeight - 220, 600);
   isSmall = size < 300;
   canvas.width = size * dpr;
   canvas.height = size * dpr;
@@ -224,14 +326,80 @@ function dedupeZones(list) {
   return Array.from(map.values());
 }
 
+function sortByTime(deduped) {
+  return [...deduped].sort((a, b) => {
+    const ta = a._time || getTimeInTZ(a.tz);
+    const tb = b._time || getTimeInTZ(b.tz);
+    return (ta.h24 * 60 + ta.m) - (tb.h24 * 60 + tb.m);
+  });
+}
+
+// ── TZ PICKER ───────────────────────────────────────────────────────
+function renderTzBar() {
+  const bar = document.getElementById('tz-bar');
+  // Chips for active zones
+  let html = zones.map((z, i) => `
+    <span class="tz-chip">
+      <span class="tz-chip-swatch" style="background:${z.color}" aria-hidden="true"></span>
+      ${z.label}
+      <button onclick="removeZone(${i})" aria-label="Remove ${z.label}">&times;</button>
+    </span>
+  `).join('');
+
+  // Add dropdown (if under cap)
+  if (zones.length < MAX_ZONES) {
+    const usedTzs = new Set(zones.map(z => z.tz));
+    const opts = CITY_CATALOG
+      .filter(c => !usedTzs.has(c.tz))
+      .map(c => `<option value="${c.tz}">${c.label}</option>`)
+      .join('');
+    html += `
+      <select id="addTzSelect" aria-label="Add a time zone">
+        <option value="">+ Add city…</option>
+        ${opts}
+      </select>
+    `;
+  }
+  bar.innerHTML = html;
+
+  // Bind change
+  const sel = document.getElementById('addTzSelect');
+  if (sel) {
+    sel.addEventListener('change', () => {
+      if (!sel.value) return;
+      addZone(sel.value);
+    });
+  }
+}
+
+function addZone(tz) {
+  if (zones.length >= MAX_ZONES) return;
+  const city = CITY_CATALOG.find(c => c.tz === tz);
+  if (!city) return;
+  // Pick next unused color
+  const usedColors = new Set(zones.map(z => z.color));
+  const color = HAND_COLORS.find(c => !usedColors.has(c)) || HAND_COLORS[zones.length % HAND_COLORS.length];
+  zones.push({ label: city.label, tz: city.tz, color });
+  renderTzBar();
+}
+
+function removeZone(index) {
+  zones.splice(index, 1);
+  renderTzBar();
+}
+// Expose to inline onclick
+window.removeZone = removeZone;
+
+renderTzBar();
+
 // ── DAY/NIGHT CLOCK FACE ────────────────────────────────────────────
-// Top half of face = daytime (lighter), bottom = nighttime (darker).
-// Simple universal visual cue; no location services needed.
 function drawDayNightFace(cx, cy, r) {
   const light = isLightMode();
-  const dayColor   = light ? '#e8e4d9' : '#1e2a45';
+  // Warmer, sunnier day colors
+  const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
+  const dayCenter  = light ? '#fdf0d5' : '#3d4a28';
   const nightColor = light ? '#d0cfc8' : '#0d1321';
-  const midColor   = light ? '#dcd8cd' : '#151d30';
+  const midColor   = light ? '#e8d8b8' : '#1a2418';
 
   // Night base
   ctx.beginPath();
@@ -239,25 +407,32 @@ function drawDayNightFace(cx, cy, r) {
   ctx.fillStyle = nightColor;
   ctx.fill();
 
-  // Day semicircle (top half)
+  // Day semicircle (top half) with radial warm gradient
+  ctx.save();
   ctx.beginPath();
   ctx.moveTo(cx - r, cy);
   ctx.arc(cx, cy, r, Math.PI, 0);
   ctx.closePath();
-  ctx.fillStyle = dayColor;
-  ctx.fill();
+  ctx.clip();
+  const dayGrad = ctx.createRadialGradient(cx, cy - r * 0.3, 0, cx, cy - r * 0.3, r * 1.1);
+  dayGrad.addColorStop(0, dayCenter);
+  dayGrad.addColorStop(0.6, dayColor);
+  dayGrad.addColorStop(1, midColor);
+  ctx.fillStyle = dayGrad;
+  ctx.fillRect(cx - r, cy - r, r * 2, r);
+  ctx.restore();
 
   // Soft horizon blend
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
-  const horizGrad = ctx.createLinearGradient(cx, cy - 12, cx, cy + 12);
-  horizGrad.addColorStop(0, dayColor);
-  horizGrad.addColorStop(0.5, midColor);
+  const horizGrad = ctx.createLinearGradient(cx, cy - 16, cx, cy + 16);
+  horizGrad.addColorStop(0, midColor);
+  horizGrad.addColorStop(0.5, light ? '#ddd0b0' : '#151d18');
   horizGrad.addColorStop(1, nightColor);
   ctx.fillStyle = horizGrad;
-  ctx.fillRect(cx - r, cy - 12, r * 2, 24);
+  ctx.fillRect(cx - r, cy - 16, r * 2, 32);
   ctx.restore();
 
   // Outer ring
@@ -271,13 +446,14 @@ function drawDayNightFace(cx, cy, r) {
 // ── DRAWING ─────────────────────────────────────────────────────────
 function drawFace(cx, cy, r) {
   drawDayNightFace(cx, cy, r);
-
   const light = isLightMode();
+  const use24 = is24h();
 
-  // Tick marks
+  // Tick marks — skip minute ticks on small viewports
   for (let i = 0; i < 60; i++) {
-    const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
     const isHour = i % 5 === 0;
+    if (isSmall && !isHour) continue;
+    const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
     const inner = r * (isHour ? 0.82 : 0.88);
     const outer = r * 0.92;
     ctx.beginPath();
@@ -290,15 +466,17 @@ function drawFace(cx, cy, r) {
     ctx.stroke();
   }
 
-  // Numerals — bold for contrast
-  const fontSize = isSmall ? r * 0.16 : r * 0.14;
+  // Numerals
+  const count = use24 ? 24 : 12;
+  const fontSize = isSmall ? r * 0.14 : (use24 ? r * 0.10 : r * 0.14);
   ctx.fillStyle = light ? '#222' : '#ddd';
   ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  for (let n = 1; n <= 12; n++) {
-    const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
-    ctx.fillText(n.toString(), cx + Math.cos(angle) * r * 0.72, cy + Math.sin(angle) * r * 0.72);
+  for (let n = 1; n <= count; n++) {
+    const angle = (n / count) * Math.PI * 2 - Math.PI / 2;
+    const nr = use24 ? r * 0.68 : r * 0.72;
+    ctx.fillText(n.toString(), cx + Math.cos(angle) * nr, cy + Math.sin(angle) * nr);
   }
 
   // Center dot
@@ -312,7 +490,6 @@ function drawHand(cx, cy, angle, length, width, color, label, labelMode) {
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
 
-  // Shadow
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 4;
@@ -333,28 +510,52 @@ function drawHand(cx, cy, angle, length, width, color, label, labelMode) {
     const lx = cx + Math.cos(angle) * labelR;
     const ly = cy + Math.sin(angle) * labelR;
     const fs = isSmall ? 9 : 11;
-
     ctx.save();
     ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
-    // Background pill for contrast
     const tw = ctx.measureText(label).width + 6;
     const th = fs + 4;
     ctx.fillStyle = isLightMode() ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)';
     ctx.beginPath();
     ctx.roundRect(lx - tw / 2, ly - th / 2, tw, th, 3);
     ctx.fill();
-
     ctx.fillStyle = color;
     ctx.fillText(label, lx, ly);
+    ctx.restore();
+  }
+
+  // Arc label along the hand
+  if (label && labelMode === 'arc') {
+    const fs = isSmall ? 8 : 10;
+    ctx.save();
+    ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
+    const chars = label.split('');
+    const charSpacing = fs * 0.9;
+    const totalLen = chars.length * charSpacing;
+    const startR = Math.max(length * 0.3, length - totalLen - 10);
+    for (let i = 0; i < chars.length; i++) {
+      const cr = startR + i * charSpacing;
+      if (cr > length) break;
+      const px = cx + Math.cos(angle) * cr;
+      const py = cy + Math.sin(angle) * cr;
+      // Background for each char
+      ctx.fillStyle = isLightMode() ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)';
+      ctx.fillRect(px - fs * 0.4, py - fs * 0.55, fs * 0.8, fs * 1.1);
+      ctx.fillStyle = color;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(chars[i], 0, 0);
+      ctx.restore();
+    }
     ctx.restore();
   }
 }
 
 function drawMinuteSecondHands(cx, cy, r) {
-  // Hide minute + second hands on small viewports
   if (isSmall) return;
 
   const now = new Date();
@@ -363,7 +564,6 @@ function drawMinuteSecondHands(cx, cy, r) {
   const ms = now.getUTCMilliseconds();
   const light = isLightMode();
 
-  // Minute hand
   const mAngle = ((m + s / 60) / 60) * Math.PI * 2 - Math.PI / 2;
   ctx.beginPath();
   ctx.moveTo(cx, cy);
@@ -373,7 +573,6 @@ function drawMinuteSecondHands(cx, cy, r) {
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Second hand
   if (document.getElementById('showSeconds').checked) {
     const useSmooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sVal = useSmooth ? (s + ms / 1000) : s;
@@ -387,7 +586,6 @@ function drawMinuteSecondHands(cx, cy, r) {
     ctx.stroke();
   }
 
-  // Center cap
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
   ctx.fillStyle = light ? '#c0392b' : '#e94560';
@@ -395,8 +593,9 @@ function drawMinuteSecondHands(cx, cy, r) {
 }
 
 function renderLegend(deduped) {
+  const sorted = sortByTime(deduped);
   const el = document.getElementById('legend');
-  el.innerHTML = deduped.map(z => {
+  el.innerHTML = sorted.map(z => {
     const t = getTimeInTZ(z.tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
     return `<span class="legend-item" role="listitem">
@@ -414,11 +613,12 @@ function updateScreenReader(deduped) {
   if (minute === lastSrUpdate) return;
   lastSrUpdate = minute;
   const el = document.getElementById('sr-times');
-  const lines = deduped.map(z => {
+  const sorted = sortByTime(deduped);
+  const lines = sorted.map(z => {
     const t = getTimeInTZ(z.tz);
     return `${z.label}: ${t.h24}:${String(t.m).padStart(2,'0')}`;
   });
-  el.textContent = 'Current times — ' + lines.join(', ');
+  el.textContent = 'Current times \u2014 ' + lines.join(', ');
 }
 
 // ── MAIN LOOP ───────────────────────────────────────────────────────
@@ -434,10 +634,13 @@ function draw() {
   const labelMode = document.getElementById('labelMode').value;
   const deduped = dedupeZones(zones);
   const handWidth = isSmall ? 3.5 : 5;
+  const use24 = is24h();
+  const divisor = use24 ? 24 : 12;
 
   for (const z of deduped) {
     const t = z._time || getTimeInTZ(z.tz);
-    const hourAngle = ((t.h + t.m / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+    const hVal = use24 ? (t.h24 + t.m / 60) : (t.h + t.m / 60);
+    const hourAngle = (hVal / divisor) * Math.PI * 2 - Math.PI / 2;
     drawHand(cx, cy, hourAngle, r * 0.52, handWidth, z.color, z.label, labelMode);
   }
 
