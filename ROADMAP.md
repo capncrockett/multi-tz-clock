@@ -7,21 +7,29 @@ Unlike typical world clock apps that show N separate clock faces, this is **one 
 
 ---
 
-## Phase 1 — MVP (HTML/Canvas)
+## Phase 1 — MVP (HTML/Canvas) ✅
 **Goal:** Working prototype, zero dependencies, runs in any browser.
 
-- Single `index.html` file with inline CSS/JS
-- HTML5 Canvas draws the clock face (tick marks, numerals)
-- Multiple hour hands rendered in distinct colors
-- Each hand labeled with city name or TZ abbreviation (e.g. "NYC / EST")
-- Minute hand + second hand for local time only (to reduce clutter)
-- Hardcoded default set of timezones (configurable in source)
-- Smooth animation via `requestAnimationFrame`
+Shipped features:
+- Single `index.html` (~800 lines) with inline CSS/JS, zero dependencies
+- HTML5 Canvas clock face: tick marks, numerals (12h and 24h), center dot
+- Up to 6 timezone hour hands in maximally distinct colors (red, blue, green, gold, purple, orange)
+- Three label modes: hand-tip, bezel (inner rim + outer city name), or legend-only
+- Shared UTC minute + second hands (seconds toggleable, hidden on small viewports)
+- 31-city catalog covering all major UTC offsets with lat/lon for sunrise/sunset
+- Add/remove zones via chip bar + dropdown, auto-color assignment
+- Day/night shading on 24h face (NOAA sunrise/sunset algorithm)
+- Zone bar chips with day/night background styling (cream/navy)
+- Optional sun/moon emoji indicators on bezel labels
+- Responsive: small viewport (<300px) hides ticks, shows even-only 24h numbers
+- Light/dark theming via `prefers-color-scheme` CSS vars
+- `prefers-reduced-motion` support (throttled rAF)
+- ADA: skip link, ARIA roles/labels, screen reader live region
+- Bezel labels auto-flip between 3 and 9 o'clock for readability
 
-**Stretch:**
-- Simple config UI (add/remove zones, pick colors)
+Not shipped (deferred):
 - Local storage persistence for user config
-- Light/dark theme toggle
+- Geolocation-based local timezone detection
 
 ---
 
@@ -85,10 +93,13 @@ Unlike typical world clock apps that show N separate clock faces, this is **one 
 ---
 
 ## Design Decisions
-- **No cap on timezone hands.** It'll get cluttered, but that's the user's choice. If a user adds a city in the same TZ as an existing one, just update the label — don't duplicate the hand.
-- **Single unified minute/second hands.** Minutes align across all TZs anyway. Default to UTC until location services are added (stretch goal).
-- **Label placement: TBD via options.** MVP ships multiple label modes so we can evaluate: (a) text at hand tip, (b) legend/key outside the face, (c) arc along the hand.
-- **Digital readout near hand tip.** Useful for quick reads and debugging. Can be toggled off.
+- **Max 6 timezone hands** (one per color). Zones sharing the same 12h hour are deduped into one hand with a combined label.
+- **Single unified UTC minute/second hands.** Minutes align across all TZs. Seconds are togglable and hidden on small screens.
+- **Three label modes** shipped: (a) floating box at hand tip, (b) bezel — TZ abbreviation on inner rim + city name on outer ring, (c) legend-only (zone bar chips only).
+- **Day/night uses real solar data.** NOAA algorithm with lat/lon from CITY_CATALOG; fallback to 6am-6pm for unknown zones.
+- **TZ abbreviations** use `Intl.DateTimeFormat` with a hardcoded fallback map for browsers that return `GMT+N`.
+- **Bezel labels flip** at 3 and 9 o'clock so text is always right-side-up.
+- **Zone bar** uses full DOM rebuild on add/remove but lightweight text-only patches each frame.
 
 ---
 

@@ -207,7 +207,8 @@
 
 <script>
 // ── CITY CATALOG ────────────────────────────────────────────────────
-// Curated list grouped by region. Covers all major offsets.
+// 31 cities covering all major UTC offsets.
+// Each entry: { label, tz (IANA), lat, lon } — lat/lon used for NOAA sunrise/sunset.
 const CITY_CATALOG = [
   { label: 'Baker Island',  tz: 'Etc/GMT+12',                        lat:   0.19, lon: -176.48 },
   { label: 'Pago Pago',     tz: 'Pacific/Pago_Pago',                 lat: -14.28, lon: -170.70 },
@@ -242,10 +243,11 @@ const CITY_CATALOG = [
   { label: 'Auckland',      tz: 'Pacific/Auckland',                  lat: -36.85, lon:  174.76 },
 ];
 
+// Maximally distinct palette: red, blue, green, gold, purple, orange.
 const HAND_COLORS = [
   '#e94560', '#4e9af1', '#2ecc71', '#e9b44c', '#9b59b6', '#e67e22',
 ];
-const MAX_ZONES = 6;
+const MAX_ZONES = HAND_COLORS.length;
 
 // ── STATE ───────────────────────────────────────────────────────────
 let zones = [
@@ -282,6 +284,8 @@ window.addEventListener('resize', resize);
 resize();
 
 // ── HELPERS ─────────────────────────────────────────────────────────
+
+/** Return { h (0-11), m, s, h24 (0-23) } for the given IANA timezone. */
 function getTimeInTZ(tz) {
   const now = new Date();
   const str = now.toLocaleString('en-US', {
@@ -308,6 +312,7 @@ const TZ_ABBREV_FALLBACK = {
   'Australia/Sydney': 'AEST', 'Pacific/Auckland': 'NZST',
 };
 
+/** Short timezone abbreviation (e.g. "EST"). Uses Intl API, falls back to TZ_ABBREV_FALLBACK. */
 function getTzAbbrev(tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(new Date());
@@ -322,14 +327,13 @@ function getTzAbbrev(tz) {
   }
 }
 
-function darkenColor(hex, factor) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`;
-}
+// ── NOAA SUNRISE/SUNSET ─────────────────────────────────────────────
 
-// ── NOAA simplified sunrise/sunset ──────────────────────────────────
+/**
+ * Simplified NOAA solar algorithm.
+ * @returns {{ sunrise: number, sunset: number } | { polarDay: true } | { polarNight: true }}
+ *          sunrise/sunset are hours in UTC (may be negative or >24).
+ */
 function getSunTimes(lat, lon) {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
@@ -363,6 +367,7 @@ function getSunTimes(lat, lon) {
   };
 }
 
+/** True if the given timezone is currently in daylight (uses NOAA, falls back to 6-18h). */
 function isDaytime(tz) {
   const city = CITY_CATALOG.find(c => c.tz === tz);
   if (!city || city.lat == null) {
@@ -380,6 +385,7 @@ function isDaytime(tz) {
   return sr < ss ? (utcH >= sr && utcH < ss) : (utcH >= sr || utcH < ss);
 }
 
+/** Merge zones sharing the same 12h hour into one entry with combined labels. */
 function dedupeZones(list) {
   const map = new Map();
   for (const z of list) {
@@ -397,6 +403,7 @@ function dedupeZones(list) {
   return Array.from(map.values());
 }
 
+/** Sort zone entries by 24h time ascending (used for zone bar and screen reader). */
 function sortByTime(deduped) {
   return [...deduped].sort((a, b) => {
     const ta = a._time || getTimeInTZ(a.tz);
@@ -405,8 +412,9 @@ function sortByTime(deduped) {
   });
 }
 
-// ── ZONE BAR (merged legend + chips + add) ─────────────────────────
-// Full rebuild — only called when zones array changes
+// ── ZONE BAR ────────────────────────────────────────────────────────
+
+/** Full DOM rebuild of zone chips + add-zone select. Called on zone add/remove. */
 function renderZoneBar() {
   const bar = document.getElementById('zone-bar');
   const sorted = sortByTime(zones.map(z => ({ ...z, _time: getTimeInTZ(z.tz) })));
@@ -441,7 +449,7 @@ function renderZoneBar() {
   if (sel) sel.addEventListener('change', () => { if (sel.value) addZone(sel.value); });
 }
 
-// Lightweight update — only refreshes time strings, called each frame
+/** Lightweight per-frame update — only patches time text in existing chips. */
 function updateZoneBarTimes() {
   const items = document.querySelectorAll('.zone-item[data-tz]');
   for (const item of items) {
@@ -473,7 +481,9 @@ window.removeZone = removeZone;
 
 renderZoneBar();
 
-// ── DAY/NIGHT CLOCK FACE (24h only) ─────────────────────
+// ── CLOCK FACE RENDERING ────────────────────────────────────────────
+
+/** Draw day/night shaded face (24h mode). Bottom half = day, top = night. */
 function drawDayNightFace(cx, cy, r) {
   const light = isLightMode();
   const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
@@ -516,6 +526,7 @@ function drawDayNightFace(cx, cy, r) {
   ctx.restore();
 }
 
+/** Draw plain solid-color face (12h mode). */
 function drawPlainFace(cx, cy, r) {
   const light = isLightMode();
   ctx.beginPath();
@@ -524,7 +535,10 @@ function drawPlainFace(cx, cy, r) {
   ctx.fill();
 }
 
-// ── DRAWING ─────────────────────────────────────────────────────────
+/**
+ * Draw complete clock face: background, ring, ticks, numerals, center dot.
+ * Delegates to drawDayNightFace or drawPlainFace based on 24h toggle.
+ */
 function drawFace(cx, cy, r) {
   const use24 = is24h();
   const light = isLightMode();
@@ -598,6 +612,10 @@ function drawFace(cx, cy, r) {
   ctx.fill();
 }
 
+/**
+ * Draw a single timezone hour hand with optional label.
+ * labelMode: 'tip' (floating box at hand tip), 'bezel' (inner rim + outer city), 'legend' (none).
+ */
 function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) {
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
@@ -699,6 +717,7 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
   }
 }
 
+/** Draw shared UTC minute + second hands (second hand hidden on small viewports). */
 function drawMinuteSecondHands(cx, cy, r) {
   const now = new Date();
   const m = now.getUTCMinutes();
@@ -735,8 +754,6 @@ function drawMinuteSecondHands(cx, cy, r) {
   ctx.fillStyle = light ? '#c0392b' : '#e94560';
   ctx.fill();
 }
-
-// Legend is now part of the zone bar — no separate render needed
 
 // ── SCREEN READER ───────────────────────────────────────────────────
 function updateScreenReader(deduped) {
