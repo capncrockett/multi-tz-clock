@@ -108,10 +108,22 @@
     border: 2px solid var(--text-muted);
     flex-shrink: 0;
   }
-  .zone-daynight {
-    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', emoji;
-    font-size: 14px;
-    line-height: 1;
+  .zone-item.zone-day {
+    background: #fdf6e3;
+    border-color: #d4a843;
+    color: #3a3000;
+  }
+  .zone-item.zone-night {
+    background: #0d1321;
+    border-color: #2a3a5c;
+    color: #b0c4e8;
+  }
+  @media (prefers-color-scheme: light) {
+    .zone-item.zone-night {
+      background: #2a2a3e;
+      border-color: #444466;
+      color: #c8d0e8;
+    }
   }
   .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
@@ -402,11 +414,11 @@ function renderZoneBar() {
     const idx = zones.findIndex(orig => orig.tz === z.tz);
     const t = z._time || getTimeInTZ(z.tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
-    const dayIcon = isDaytime(z.tz) ? '\u2600' : '\u263E';
-    return `<span class="zone-item" role="listitem" data-tz="${z.tz}">
+    const day = isDaytime(z.tz);
+    const dayClass = day ? 'zone-day' : 'zone-night';
+    return `<span class="zone-item ${dayClass}" role="listitem" data-tz="${z.tz}">
       <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
       <span>${z.label}</span>
-      <span class="zone-daynight" aria-label="${isDaytime(z.tz) ? 'Daytime' : 'Nighttime'}">${dayIcon}</span>
       <span class="zone-time">${timeStr}</span>
       <button class="zone-remove" onclick="removeZone(${idx})" aria-label="Remove ${z.label}">&times;</button>
     </span>`;
@@ -559,6 +571,8 @@ function drawFace(cx, cy, r) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let n = 1; n <= 24; n++) {
+      // On small viewports, show only even hours to reduce clutter
+      if (isSmall && n % 2 !== 0) continue;
       const angle = (n / 24) * Math.PI * 2 - Math.PI / 2;
       ctx.fillText(n.toString(), cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
     }
