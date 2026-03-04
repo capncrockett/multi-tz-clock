@@ -48,32 +48,58 @@
   }
   .skip-link:focus { top: 0; }
 
-  #controls {
-    display: flex;
-    gap: 10px;
+  .settings-wrap {
+    position: relative;
     margin-bottom: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
   }
-  #controls label {
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-  }
-  #controls select {
+  .settings-btn {
     background: var(--bg-surface);
     color: var(--text);
     border: 1px solid var(--border);
-    padding: 4px 8px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .settings-btn:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .settings-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+    min-width: 190px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .settings-panel label {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .settings-panel select {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 3px 6px;
     border-radius: 4px;
     font-size: 13px;
     cursor: pointer;
   }
-  #controls select:focus,
-  #controls input:focus {
+  .settings-panel select:focus,
+  .settings-panel input:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
@@ -93,13 +119,13 @@
   .zone-item {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 3px 6px 3px 6px;
-    font-size: 13px;
-    font-weight: 600;
+    padding: 4px 10px 4px 8px;
+    font-size: 14px;
+    font-weight: 700;
     white-space: nowrap;
   }
   .zone-swatch {
@@ -111,24 +137,30 @@
   .zone-item.zone-day {
     background: #fdf6e3;
     border-color: #d4a843;
-    color: #3a3000;
+    color: #1a1000;
   }
+  .zone-item.zone-day .zone-time { color: #5a4a20; }
+  .zone-item.zone-day .zone-remove { color: #8a7a50; }
   .zone-item.zone-night {
     background: #0d1321;
     border-color: #2a3a5c;
-    color: #b0c4e8;
+    color: #eef0f8;
   }
+  .zone-item.zone-night .zone-time { color: #a0b0d0; }
+  .zone-item.zone-night .zone-remove { color: #7080a0; }
   @media (prefers-color-scheme: light) {
     .zone-item.zone-night {
       background: #2a2a3e;
       border-color: #444466;
-      color: #c8d0e8;
+      color: #eef0f8;
     }
+    .zone-item.zone-night .zone-time { color: #b0b8d0; }
+    .zone-item.zone-night .zone-remove { color: #8890a8; }
   }
   .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
-    opacity: 0.75;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
   }
   .zone-remove {
     background: none; border: none;
@@ -167,8 +199,7 @@
   }
 
   @media (max-width: 400px) {
-    #controls { gap: 6px; }
-    #controls label { font-size: 12px; }
+    .settings-panel { min-width: 160px; }
     #zone-bar {
       flex-direction: column;
       align-items: center;
@@ -181,22 +212,20 @@
 
 <a class="skip-link" href="#zone-bar">Skip to time zones</a>
 
-<div id="controls" role="toolbar" aria-label="Clock display options">
-  <label>Labels:
-    <select id="labelMode" aria-label="Label display mode">
-      <option value="tip">At hand tip</option>
-      <option value="bezel">On bezel</option>
-      <option value="legend">Legend only</option>
-    </select>
-  </label>
-  <label>
-    <input type="checkbox" id="showSeconds" checked aria-label="Toggle second hand">
-    Seconds
-  </label>
-  <label>
-    <input type="checkbox" id="use24h" aria-label="Toggle 24-hour clock">
-    24h
-  </label>
+<div class="settings-wrap">
+  <button id="settingsBtn" class="settings-btn" aria-expanded="false" aria-controls="settingsPanel">Options ▾</button>
+  <div id="settingsPanel" class="settings-panel" role="group" aria-label="Clock display options" hidden>
+    <label>Labels:
+      <select id="labelMode" aria-label="Label display mode">
+        <option value="tip">At hand tip</option>
+        <option value="bezel">On bezel</option>
+        <option value="legend">Legend only</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="showSeconds" checked> Seconds</label>
+    <label><input type="checkbox" id="use24h"> 24-hour</label>
+    <label><input type="checkbox" id="showSunMoon" checked> Sun / Moon</label>
+  </div>
 </div>
 
 <canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
@@ -242,7 +271,7 @@ const CITY_CATALOG = [
 ];
 
 const HAND_COLORS = [
-  '#e94560', '#4e9af1', '#53d8fb', '#e9b44c', '#2ecc71', '#e67e22',
+  '#e94560', '#4e9af1', '#2ecc71', '#e9b44c', '#9b59b6', '#e67e22',
 ];
 const MAX_ZONES = 6;
 
@@ -472,7 +501,26 @@ window.removeZone = removeZone;
 
 renderZoneBar();
 
-// ── DAY/NIGHT CLOCK FACE (24h only) ───────────────────────────────
+// ── SETTINGS DROPDOWN ─────────────────────────────────────────
+document.getElementById('settingsBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('settingsPanel');
+  const btn = document.getElementById('settingsBtn');
+  const open = !panel.hidden;
+  panel.hidden = open;
+  btn.setAttribute('aria-expanded', !open);
+});
+// Close when clicking outside
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.settings-wrap');
+  const panel = document.getElementById('settingsPanel');
+  if (!wrap.contains(e.target) && !panel.hidden) {
+    panel.hidden = true;
+    document.getElementById('settingsBtn').setAttribute('aria-expanded', 'false');
+  }
+});
+
+// ── DAY/NIGHT CLOCK FACE (24h only) ─────────────────────────
 function drawDayNightFace(cx, cy, r) {
   const light = isLightMode();
   const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
@@ -616,8 +664,8 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
   ctx.stroke();
   ctx.restore();
 
-  // Sun/moon indicator on 12h clock only
-  if (!is24h() && tz) {
+  // Sun/moon indicator on 12h clock (optional)
+  if (!is24h() && tz && document.getElementById('showSunMoon').checked) {
     const symbol = day ? '\u2600' : '\u263E';  // ☀ or ☾
     const symR = length * 0.38;
     const sx = cx + Math.cos(angle) * symR;
