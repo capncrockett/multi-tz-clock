@@ -108,6 +108,11 @@
     border: 2px solid var(--text-muted);
     flex-shrink: 0;
   }
+  .zone-daynight {
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', emoji;
+    font-size: 14px;
+    line-height: 1;
+  }
   .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
     opacity: 0.75;
@@ -546,9 +551,9 @@ function drawFace(cx, cy, r) {
   // Numerals
   const count = use24 ? 24 : 12;
   if (use24) {
-    // 24h: numerals on the OUTER ring; on small viewports push to tick area
+    // 24h: inside ticks on large, replacing ticks on small
     const fontSize = isSmall ? r * 0.14 : r * 0.09;
-    const numR = isSmall ? r * 0.88 : r * 0.96;
+    const numR = isSmall ? r * 0.88 : r * 0.76;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
@@ -583,16 +588,6 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
   const tipY = cy + Math.sin(angle) * length;
   const day = tz ? isDaytime(tz) : true;
 
-  // Gradient hand: day = bright (0.55→1.0), night = muted (0.15→0.4)
-  const grad = ctx.createLinearGradient(cx, cy, tipX, tipY);
-  if (day) {
-    grad.addColorStop(0, darkenColor(color, 0.55));
-    grad.addColorStop(1, color);
-  } else {
-    grad.addColorStop(0, darkenColor(color, 0.15));
-    grad.addColorStop(1, darkenColor(color, 0.4));
-  }
-
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 4;
@@ -601,7 +596,7 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, labelMode) 
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(tipX, tipY);
-  ctx.strokeStyle = grad;
+  ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
   ctx.stroke();
