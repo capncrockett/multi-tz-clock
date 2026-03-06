@@ -88,6 +88,11 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   await expect(showDebugFrames).toBeEnabled();
   await showDebugFrames.check();
   await expect(showDebugFrames).toBeChecked();
+
+  const appShellOutline = await page.evaluate(() => {
+    return getComputedStyle(document.getElementById('app-shell')).outlineStyle;
+  });
+  expect(appShellOutline).toBe('dashed');
 });
 
 test('zone add and remove flow updates chip count', async ({ page }) => {
@@ -247,6 +252,7 @@ test('accessibility hooks are present', async ({ page }) => {
   await gotoApp(page);
 
   await expect(page.locator('.skip-link')).toHaveAttribute('href', '#zone-bar');
+  await expect(page.locator('#app-shell')).toBeVisible();
   await expect(page.locator('#controls')).toHaveAttribute('role', 'toolbar');
   await expect(page.locator('#zone-bar')).toHaveAttribute('role', 'list');
   await expect(page.locator('#sr-times')).toHaveAttribute('aria-live', 'polite');

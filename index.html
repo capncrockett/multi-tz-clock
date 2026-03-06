@@ -11,20 +11,23 @@
 
 <a class="skip-link" href="#zone-bar">Skip to time zones</a>
 
-<div id="desktop-drag-bar" aria-hidden="true"></div>
+<div id="app-shell">
+  <div id="desktop-drag-bar" aria-hidden="true"></div>
 
-<div id="controls" role="toolbar" aria-label="Clock display options">
-  <label><input type="checkbox" id="showBezelLabels"> Bezel</label>
-  <label id="showOuterCityLabel"><input type="checkbox" id="showOuterCity"> City</label>
-  <label><input type="checkbox" id="showSeconds" checked> Sec</label>
-  <label><input type="checkbox" id="use24h"> 24h</label>
+  <div id="controls" role="toolbar" aria-label="Clock display options">
+    <label><input type="checkbox" id="showBezelLabels"> Bezel</label>
+    <label id="showOuterCityLabel"><input type="checkbox" id="showOuterCity"> City</label>
+    <label><input type="checkbox" id="showSeconds" checked> Sec</label>
+    <label><input type="checkbox" id="use24h"> 24h</label>
+  </div>
+
+  <canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
+
+  <div id="zone-bar" role="list" aria-label="Active time zones"></div>
 </div>
-
-<canvas id="clock" role="img" aria-label="Analog clock displaying multiple time zones"></canvas>
 
 <div id="sr-times" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <div id="zone-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-<div id="zone-bar" role="list" aria-label="Active time zones"></div>
 <div id="debug-overlay" class="debug-overlay" aria-hidden="true">
   <div id="debug-main" class="debug-panel debug-main"></div>
   <div id="debug-selected" class="debug-panel debug-selected"></div>

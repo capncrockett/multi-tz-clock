@@ -67,7 +67,7 @@ const canvas = document.getElementById('clock');
 const ctx = canvas.getContext('2d');
 const SMALL_BREAKPOINT = 300;
 const XSMALL_BREAKPOINT = 220;
-const DEBUG_FRAME_TARGET_IDS = ['controls', 'clock', 'zone-bar'];
+const DEBUG_FRAME_TARGET_IDS = ['app-shell', 'controls', 'clock', 'zone-bar'];
 const ClockUtils = window.ClockUtils || {};
 const deriveViewportFlags = ClockUtils.deriveViewportFlags || ((size, smallBp, xsmallBp) => {
   const isXSmall = size < xsmallBp;
@@ -402,6 +402,7 @@ function setupDebugFrameTargets() {
     if (!el) continue;
     el.addEventListener('click', (event) => {
       if (!isDebugFramesOn()) return;
+      if (id === 'app-shell' && event.target !== el) return;
       if (id === 'controls' && event.target.closest('input,button,select,label')) return;
       event.stopPropagation();
       setDebugFrameSelection(id);
@@ -410,7 +411,7 @@ function setupDebugFrameTargets() {
 
   document.addEventListener('click', (event) => {
     if (!isDebugFramesOn()) return;
-    const inTarget = event.target.closest('#controls,#clock,#zone-bar');
+    const inTarget = event.target.closest('#app-shell,#controls,#clock,#zone-bar');
     if (!inTarget) {
       setDebugFrameSelection('');
     }

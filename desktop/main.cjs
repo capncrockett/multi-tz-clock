@@ -8,8 +8,11 @@ const {
 } = require("electron");
 const {
   createMainWindowOptions,
+  getClosestWindowSizePreset,
   getClockHtmlPath,
-  createTrayMenuEntries
+  createTrayMenuEntries,
+  getWindowSizePreset,
+  DEFAULT_WINDOW_PRESET_ID
 } = require("./window-config.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -18,6 +21,9 @@ const preloadPath = path.join(__dirname, "preload.cjs");
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let currentWindowPresetId = DEFAULT_WINDOW_PRESET_ID;
+let resizeSnapTimer = null;
+let isApplyingWindowPreset = false;
 
 function createTrayIcon() {
   const svg = `
@@ -80,6 +86,45 @@ function quitApplication() {
   app.quit();
 }
 
+function buildTrayMenuItem(entry) {
+  if (entry.type === "separator") {
+    return { type: "separator" };
+  }
+
+  const item = {
+    label: entry.label,
+    type: entry.type || "normal"
+  };
+
+  if (typeof entry.checked === "boolean") {
+    item.checked = entry.checked;
+  }
+
+  if (Array.isArray(entry.submenu)) {
+    item.submenu = entry.submenu.map(buildTrayMenuItem);
+  }
+
+  switch (entry.id) {
+    case "toggle-visibility":
+      item.click = toggleWindowVisibility;
+      break;
+    case "toggle-always-on-top":
+      item.click = toggleAlwaysOnTop;
+      break;
+    case "quit":
+      item.click = quitApplication;
+      break;
+    default:
+      if (entry.id?.startsWith("size-")) {
+        const presetId = entry.id.slice("size-".length);
+        item.click = () => applyWindowPreset(presetId);
+      }
+      break;
+  }
+
+  return item;
+}
+
 function refreshTrayMenu() {
   if (!tray) {
     return;
@@ -88,42 +133,68 @@ function refreshTrayMenu() {
   const win = getMainWindow();
   const entries = createTrayMenuEntries({
     isVisible: !!win?.isVisible(),
-    isAlwaysOnTop: !!win?.isAlwaysOnTop()
+    isAlwaysOnTop: !!win?.isAlwaysOnTop(),
+    currentPresetId: currentWindowPresetId
   });
 
-  const template = entries.map((entry) => {
-    if (entry.type === "separator") {
-      return { type: "separator" };
-    }
-
-    const item = {
-      label: entry.label,
-      type: entry.type || "normal"
-    };
-
-    if (typeof entry.checked === "boolean") {
-      item.checked = entry.checked;
-    }
-
-    switch (entry.id) {
-      case "toggle-visibility":
-        item.click = toggleWindowVisibility;
-        break;
-      case "toggle-always-on-top":
-        item.click = toggleAlwaysOnTop;
-        break;
-      case "quit":
-        item.click = quitApplication;
-        break;
-      default:
-        break;
-    }
-
-    return item;
-  });
+  const template = entries.map(buildTrayMenuItem);
 
   tray.setContextMenu(Menu.buildFromTemplate(template));
   tray.setToolTip("Multi-TZ Clock");
+}
+
+function applyWindowPreset(presetId) {
+  const preset = getWindowSizePreset(presetId);
+  currentWindowPresetId = preset.id;
+
+  const win = getMainWindow();
+  if (!win) {
+    return;
+  }
+
+  isApplyingWindowPreset = true;
+  win.setContentSize(preset.width, preset.height);
+  refreshTrayMenu();
+
+  setTimeout(() => {
+    isApplyingWindowPreset = false;
+  }, 0);
+}
+
+function snapWindowToNearestPreset() {
+  const win = getMainWindow();
+  if (!win || isApplyingWindowPreset) {
+    return;
+  }
+
+  const [contentWidth, contentHeight] = win.getContentSize();
+  const nearestPreset = getClosestWindowSizePreset(contentWidth, contentHeight);
+  const currentPreset = getWindowSizePreset(nearestPreset.id);
+  const alreadyAtPresetSize = contentWidth === currentPreset.width && contentHeight === currentPreset.height;
+  if (nearestPreset.id !== currentWindowPresetId || !alreadyAtPresetSize) {
+    applyWindowPreset(nearestPreset.id);
+  }
+}
+
+function scheduleWindowPresetSnap() {
+  if (resizeSnapTimer) {
+    clearTimeout(resizeSnapTimer);
+  }
+
+  resizeSnapTimer = setTimeout(() => {
+    resizeSnapTimer = null;
+    snapWindowToNearestPreset();
+  }, 140);
+}
+
+function wireWindowSizing(win) {
+  win.on("resize", () => {
+    if (isApplyingWindowPreset) {
+      return;
+    }
+
+    scheduleWindowPresetSnap();
+  });
 }
 
 function createTray() {
@@ -137,8 +208,10 @@ function createMainWindow() {
   mainWindow = new BrowserWindow(createMainWindowOptions({ preloadPath }));
   mainWindow.setAlwaysOnTop(true, "screen-saver");
   mainWindow.loadFile(getClockHtmlPath(repoRoot));
+  wireWindowSizing(mainWindow);
 
   mainWindow.once("ready-to-show", () => {
+    applyWindowPreset(currentWindowPresetId);
     mainWindow.show();
     refreshTrayMenu();
   });
@@ -172,4 +245,8 @@ app.whenReady().then(() => {
 
 app.on("before-quit", () => {
   isQuitting = true;
+  if (resizeSnapTimer) {
+    clearTimeout(resizeSnapTimer);
+    resizeSnapTimer = null;
+  }
 });

@@ -1,6 +1,10 @@
 const path = require("node:path");
 const {
+  WINDOW_SIZE_PRESETS,
+  DEFAULT_WINDOW_PRESET_ID,
   DEFAULT_WINDOW_BOUNDS,
+  getWindowSizePreset,
+  getClosestWindowSizePreset,
   createMainWindowOptions,
   getClockHtmlPath,
   createTrayMenuEntries
@@ -22,6 +26,7 @@ describe("desktop/window-config", () => {
       maximizable: false,
       fullscreenable: false,
       show: false,
+      useContentSize: true,
       title: "Multi-TZ Clock"
     });
     expect(options.webPreferences).toEqual({
@@ -41,15 +46,37 @@ describe("desktop/window-config", () => {
     expect(getClockHtmlPath("C:\\repo")).toBe(path.join("C:\\repo", "index.html"));
   });
 
-  test("builds tray menu descriptors for visible and pinned states", () => {
-    expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true })).toEqual([
+  test("exposes the three desktop size presets and falls back to medium", () => {
+    expect(WINDOW_SIZE_PRESETS.map((preset) => preset.id)).toEqual(["xsmall", "small", "medium"]);
+    expect(DEFAULT_WINDOW_PRESET_ID).toBe("medium");
+    expect(getWindowSizePreset("small")).toMatchObject({ id: "small", width: 312, height: 500 });
+    expect(getWindowSizePreset("unknown")).toMatchObject({ id: "medium", width: 420, height: 560 });
+  });
+
+  test("snaps arbitrary window sizes to the nearest preset", () => {
+    expect(getClosestWindowSizePreset(210, 420).id).toBe("xsmall");
+    expect(getClosestWindowSizePreset(320, 490).id).toBe("small");
+    expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
+  });
+
+  test("builds tray menu descriptors for visible, pinned, and preset states", () => {
+    expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true, currentPresetId: "small" })).toEqual([
       { id: "toggle-visibility", label: "Hide Clock" },
+      {
+        id: "window-size",
+        label: "Window Size",
+        submenu: [
+          { id: "size-xsmall", label: "X-Small", type: "radio", checked: false },
+          { id: "size-small", label: "Small", type: "radio", checked: true },
+          { id: "size-medium", label: "Medium", type: "radio", checked: false }
+        ]
+      },
       { id: "toggle-always-on-top", label: "Always on Top", type: "checkbox", checked: true },
       { type: "separator" },
       { id: "quit", label: "Quit" }
     ]);
 
-    expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false })[0]).toEqual({
+    expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false, currentPresetId: "medium" })[0]).toEqual({
       id: "toggle-visibility",
       label: "Show Clock"
     });
