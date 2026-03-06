@@ -1,33 +1,67 @@
 # multi-tz-clock
 
-A single analog clock face with multiple color-coded hour hands — one per time zone. At a glance, see the relative time difference between cities without scanning multiple dials.
+A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.
 
 ## Quick Start
 
 Open `index.html` in any modern browser. No build step, no dependencies.
 
+## Automated Testing (Playwright)
+
+Install dependencies and browser once:
+
+```bash
+npm install
+npx playwright install chromium
+```
+
+Run the end-to-end smoke suite:
+
+```bash
+npm run test:e2e
+```
+
+Useful variants:
+
+- `npm run test:e2e:headed` - run tests with a visible browser
+- `npm run test:e2e:ui` - open Playwright UI mode
+- `npm run test:e2e:report` - open the latest HTML report
+
+## File Layout (Phase 1.1)
+
+- `index.html` - Markup and UI structure
+- `assets/css/main.css` - App styles and responsive/theming rules
+- `assets/js/app.js` - App logic, rendering, time math, and interactions
+- `ARCHITECTURE.md` - Technical deep dive for engineering handoff
+- `ROADMAP.md` - Multi-phase platform plan
+
 ## Features (Phase 1 MVP)
 
-- **Up to 6 timezone hands** in distinct colors (red, blue, green, gold, purple, orange)
-- **Three label modes**: hand-tip, bezel (inner abbreviation + outer city name), legend-only
-- **12h / 24h toggle** — 24h face shows day/night shading using NOAA sunrise/sunset data
-- **Add/remove zones** from a 31-city catalog covering all major UTC offsets
-- **Responsive** — compact mode for small viewports (<300px)
-- **Accessible** — skip link, ARIA roles, screen reader live region
-- **Theming** — auto light/dark via `prefers-color-scheme`
-- **Reduced motion** — respects `prefers-reduced-motion`
+- Up to 6 timezone hands in distinct colors
+- Bezel labels with optional TZ/city text switch, or legend-only mode
+- 12h / 24h toggle
+- 24h face day/night shading via NOAA sunrise/sunset math
+- Add/remove zones from a 31-city catalog
+- Responsive compact mode for small viewports
+- Accessible controls, skip link, and live region updates
+- Light/dark theme support via `prefers-color-scheme`
+- Reduced motion support via `prefers-reduced-motion`
+
+## Important Note on Timezone Precision
+
+Phase 1.1 intentionally keeps existing hour-hand behavior and does not yet implement special rendering for sub-hour timezone offsets (for example +30 or +45 minute offsets). This is a deferred stretch goal for later phases.
 
 ## Controls
 
-- **Labels**: Select label display mode (tip / bezel / legend)
-- **Sec**: Toggle second hand
-- **24h**: Toggle 24-hour face with day/night shading
-- **☀/☾**: Toggle sun/moon indicators on bezel labels
+- `Bezel`: show/hide inner bezel labels
+- `Sec`: second-hand toggle
+- `24h`: 24-hour face toggle
+- `City`: switches bezel text between TZ abbreviation and city name (disabled when Bezel is off)
 
 ## Docs
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Technical deep dive (written for AI agent handoff)
-- [ROADMAP.md](ROADMAP.md) — 5-phase plan: Browser → Desktop → Windows → Apple → Android
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [ROADMAP.md](ROADMAP.md)
 
 ## License
 

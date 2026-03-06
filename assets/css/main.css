@@ -1,0 +1,183 @@
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #1a1a2e;
+    --bg-surface: #16213e;
+    --border: #0f3460;
+    --text: #eeeeee;
+    --text-muted: #aaaaaa;
+    --accent: #e94560;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f0f0f5;
+      --bg-surface: #ffffff;
+      --border: #c0c0d0;
+      --text: #1a1a2e;
+      --text-muted: #555555;
+      --accent: #c0392b;
+    }
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -100px; left: 0;
+    background: var(--accent); color: #fff;
+    padding: 8px 16px; z-index: 100;
+    font-size: 14px; text-decoration: none;
+    border-radius: 0 0 4px 0;
+  }
+  .skip-link:focus { top: 0; }
+
+  #controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  #controls label {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  #controls label.control-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #controls label.control-disabled input {
+    cursor: not-allowed;
+  }
+  #controls select {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #controls select:focus,
+  #controls input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  canvas { display: block; }
+
+  /* ── Unified zone bar (legend + chips + add) ── */
+  #zone-bar {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    max-width: 640px;
+  }
+  .zone-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 4px 10px 4px 8px;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .zone-swatch {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--text-muted);
+    flex-shrink: 0;
+  }
+  .zone-item.zone-day {
+    background: #fdf6e3;
+    border-color: #d4a843;
+    color: #1a1000;
+  }
+  .zone-item.zone-day .zone-time { color: #5a4a20; }
+  .zone-item.zone-day .zone-remove { color: #8a7a50; }
+  .zone-item.zone-night {
+    background: #0d1321;
+    border-color: #2a3a5c;
+    color: #eef0f8;
+  }
+  .zone-item.zone-night .zone-time { color: #a0b0d0; }
+  .zone-item.zone-night .zone-remove { color: #7080a0; }
+  @media (prefers-color-scheme: light) {
+    .zone-item.zone-night {
+      background: #2a2a3e;
+      border-color: #444466;
+      color: #eef0f8;
+    }
+    .zone-item.zone-night .zone-time { color: #b0b8d0; }
+    .zone-item.zone-night .zone-remove { color: #8890a8; }
+  }
+  .zone-time {
+    font-family: 'Cascadia Mono', 'Consolas', monospace;
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .zone-remove {
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer; font-size: 15px;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .zone-remove:hover { color: var(--accent); }
+  .zone-remove:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  #zone-bar select {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 13px;
+    cursor: pointer;
+    max-width: 180px;
+  }
+  #zone-bar select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  @media (max-width: 400px) {
+    #controls { gap: 6px; }
+    #controls label { font-size: 12px; }
+    #zone-bar {
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+  }

@@ -1,0 +1,28 @@
+{
+  "name": "multi-tz-clock",
+  "version": "1.0.0",
+  "description": "A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capncrockett/multi-tz-clock.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/capncrockett/multi-tz-clock/issues"
+  },
+  "homepage": "https://github.com/capncrockett/multi-tz-clock#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  },
+  "private": true
+}
