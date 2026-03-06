@@ -9,7 +9,6 @@ const DEFAULT_WINDOW_PRESET_ID = "medium";
 const DEFAULT_WINDOW_PRESET = WINDOW_SIZE_PRESETS.find((preset) => preset.id === DEFAULT_WINDOW_PRESET_ID);
 const MIN_WINDOW_PRESET = WINDOW_SIZE_PRESETS[0];
 const MAX_WINDOW_PRESET = WINDOW_SIZE_PRESETS[WINDOW_SIZE_PRESETS.length - 1];
-const TOP_EDGE_PIN_THRESHOLD = 4;
 const DEFAULT_WINDOW_BOUNDS = Object.freeze({
   width: DEFAULT_WINDOW_PRESET.width,
   height: DEFAULT_WINDOW_PRESET.height,
@@ -34,14 +33,28 @@ function getClosestWindowSizePreset(width, height) {
   }, DEFAULT_WINDOW_PRESET);
 }
 
-function pinWindowToTopEdge(bounds, threshold = TOP_EDGE_PIN_THRESHOLD) {
-  if (!bounds || !Number.isFinite(bounds.x) || !Number.isFinite(bounds.y)) {
+function fitBoundsWithinArea(bounds, area) {
+  if (
+    !bounds
+    || !area
+    || !Number.isFinite(bounds.x)
+    || !Number.isFinite(bounds.y)
+    || !Number.isFinite(bounds.width)
+    || !Number.isFinite(bounds.height)
+    || !Number.isFinite(area.x)
+    || !Number.isFinite(area.y)
+    || !Number.isFinite(area.width)
+    || !Number.isFinite(area.height)
+  ) {
     return null;
   }
 
+  const maxX = area.x + Math.max(area.width - bounds.width, 0);
+  const maxY = area.y + Math.max(area.height - bounds.height, 0);
+
   return {
-    x: bounds.x,
-    y: bounds.y <= threshold ? 0 : bounds.y
+    x: Math.min(Math.max(bounds.x, area.x), maxX),
+    y: Math.min(Math.max(bounds.y, area.y), maxY)
   };
 }
 
@@ -100,11 +113,10 @@ function createTrayMenuEntries({ isUiVisible, isAlwaysOnTop }) {
 module.exports = {
   WINDOW_SIZE_PRESETS,
   DEFAULT_WINDOW_PRESET_ID,
-  TOP_EDGE_PIN_THRESHOLD,
   DEFAULT_WINDOW_BOUNDS,
   getWindowSizePreset,
   getClosestWindowSizePreset,
-  pinWindowToTopEdge,
+  fitBoundsWithinArea,
   createMainWindowOptions,
   getClockHtmlPath,
   createTrayMenuEntries

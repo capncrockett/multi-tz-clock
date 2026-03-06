@@ -2,11 +2,10 @@ const path = require("node:path");
 const {
   WINDOW_SIZE_PRESETS,
   DEFAULT_WINDOW_PRESET_ID,
-  TOP_EDGE_PIN_THRESHOLD,
   DEFAULT_WINDOW_BOUNDS,
   getWindowSizePreset,
   getClosestWindowSizePreset,
-  pinWindowToTopEdge,
+  fitBoundsWithinArea,
   createMainWindowOptions,
   getClockHtmlPath,
   createTrayMenuEntries
@@ -61,11 +60,23 @@ describe("desktop/window-config", () => {
     expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
   });
 
-  test("pins top-edge moves to y=0 on windows-sized bounds", () => {
-    expect(pinWindowToTopEdge({ x: 120, y: 0 })).toEqual({ x: 120, y: 0 });
-    expect(pinWindowToTopEdge({ x: 120, y: TOP_EDGE_PIN_THRESHOLD })).toEqual({ x: 120, y: 0 });
-    expect(pinWindowToTopEdge({ x: 120, y: 24 })).toEqual({ x: 120, y: 24 });
-    expect(pinWindowToTopEdge(null)).toBeNull();
+  test("fits bounds within a visible work area when the ui must be shown", () => {
+    expect(fitBoundsWithinArea(
+      { x: -20, y: -10, width: 312, height: 660 },
+      { x: 0, y: 0, width: 1920, height: 1040 }
+    )).toEqual({ x: 0, y: 0 });
+
+    expect(fitBoundsWithinArea(
+      { x: 1800, y: 900, width: 420, height: 560 },
+      { x: 0, y: 0, width: 1920, height: 1040 }
+    )).toEqual({ x: 1500, y: 480 });
+
+    expect(fitBoundsWithinArea(
+      { x: 120, y: 24, width: 232, height: 580 },
+      { x: 0, y: 0, width: 1920, height: 1040 }
+    )).toEqual({ x: 120, y: 24 });
+
+    expect(fitBoundsWithinArea(null, null)).toBeNull();
   });
 
   test("builds tray menu descriptors for ui visibility and pinned states", () => {

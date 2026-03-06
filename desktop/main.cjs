@@ -4,6 +4,7 @@ const {
   BrowserWindow,
   ipcMain,
   Menu,
+  screen,
   Tray,
   nativeImage
 } = require("electron");
@@ -14,7 +15,7 @@ const {
   createTrayMenuEntries,
   getWindowSizePreset,
   DEFAULT_WINDOW_PRESET_ID,
-  pinWindowToTopEdge
+  fitBoundsWithinArea
 } = require("./window-config.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -27,7 +28,6 @@ let currentWindowPresetId = DEFAULT_WINDOW_PRESET_ID;
 let resizeSnapTimer = null;
 let isApplyingWindowPreset = false;
 let isDesktopUiVisible = true;
-let isPinningTopEdge = false;
 
 function createTrayIcon() {
   const svg = `
@@ -90,10 +90,31 @@ function quitApplication() {
   app.quit();
 }
 
+function keepWindowWithinVisibleWorkArea() {
+  const win = getMainWindow();
+  if (!win) {
+    return;
+  }
+
+  const bounds = win.getBounds();
+  const display = screen.getDisplayMatching(bounds);
+  const fitted = fitBoundsWithinArea(bounds, display?.workArea);
+  if (!fitted) {
+    return;
+  }
+
+  if (fitted.x !== bounds.x || fitted.y !== bounds.y) {
+    win.setPosition(fitted.x, fitted.y);
+  }
+}
+
 function setDesktopUiVisible(nextVisible) {
   isDesktopUiVisible = !!nextVisible;
 
   const win = getMainWindow();
+  if (isDesktopUiVisible) {
+    keepWindowWithinVisibleWorkArea();
+  }
   if (win && !win.isDestroyed()) {
     win.webContents.send("desktop:ui-visibility-changed", isDesktopUiVisible);
   }
@@ -168,6 +189,9 @@ function applyWindowPreset(presetId) {
 
   isApplyingWindowPreset = true;
   win.setContentSize(preset.width, preset.height);
+  if (isDesktopUiVisible) {
+    keepWindowWithinVisibleWorkArea();
+  }
   win.webContents.send("desktop:window-size-preset-changed", currentWindowPresetId);
   refreshTrayMenu();
 
@@ -209,24 +233,6 @@ function wireWindowSizing(win) {
     }
 
     scheduleWindowPresetSnap();
-  });
-
-  win.on("will-move", (event, newBounds) => {
-    if (process.platform !== "win32" || isPinningTopEdge) {
-      return;
-    }
-
-    const pinnedBounds = pinWindowToTopEdge(newBounds);
-    if (!pinnedBounds || pinnedBounds.y === newBounds.y) {
-      return;
-    }
-
-    event.preventDefault();
-    isPinningTopEdge = true;
-    win.setPosition(pinnedBounds.x, pinnedBounds.y);
-    setTimeout(() => {
-      isPinningTopEdge = false;
-    }, 0);
   });
 }
 
