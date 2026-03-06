@@ -141,6 +141,9 @@ function isLightMode() {
 function is24h() {
   return document.getElementById('use24h').checked;
 }
+function getDesktopShell() {
+  return window.desktopShell || null;
+}
 let cachedThemePalette = null;
 let cachedThemeKey = '';
 
@@ -394,6 +397,38 @@ function syncDebugControlState() {
   document.body.classList.toggle('debug-on', debugEnabled);
   document.body.classList.toggle('debug-frames-on', debugEnabled && framesToggle.checked);
   syncDebugFrameSelection();
+}
+
+async function initializeDesktopWindowControls() {
+  const desktopShell = getDesktopShell();
+  const sizeSelect = document.getElementById('desktopWindowSize');
+  if (!desktopShell?.isDesktop || !sizeSelect) return;
+
+  const syncValue = (presetId) => {
+    if (!presetId) return;
+    sizeSelect.value = presetId;
+  };
+
+  if (typeof desktopShell.getWindowSizePreset === 'function') {
+    try {
+      syncValue(await desktopShell.getWindowSizePreset());
+    } catch {
+      // Ignore shell query failures and keep the default select value.
+    }
+  }
+
+  sizeSelect.addEventListener('change', async () => {
+    if (typeof desktopShell.setWindowSizePreset !== 'function') return;
+    try {
+      syncValue(await desktopShell.setWindowSizePreset(sizeSelect.value));
+    } catch {
+      // Ignore shell resize failures so the browser app keeps running.
+    }
+  });
+
+  if (typeof desktopShell.onWindowSizePresetChange === 'function') {
+    desktopShell.onWindowSizePresetChange(syncValue);
+  }
 }
 
 function setupDebugFrameTargets() {
@@ -1032,6 +1067,7 @@ function draw() {
 async function initializeApp() {
   await restorePersistedState();
   resize();
+  await initializeDesktopWindowControls();
   document.getElementById('showBezelLabels').addEventListener('change', () => {
     syncCityControlState();
     persistAppState();

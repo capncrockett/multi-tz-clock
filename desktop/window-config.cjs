@@ -65,21 +65,11 @@ function getClockHtmlPath(repoRoot) {
   return path.join(repoRoot, "index.html");
 }
 
-function createTrayMenuEntries({ isVisible, isAlwaysOnTop, currentPresetId }) {
+function createTrayMenuEntries({ isVisible, isAlwaysOnTop }) {
   return [
     {
       id: "toggle-visibility",
-      label: isVisible ? "Hide Clock" : "Show Clock"
-    },
-    {
-      id: "window-size",
-      label: "Window Size",
-      submenu: WINDOW_SIZE_PRESETS.map((preset) => ({
-        id: `size-${preset.id}`,
-        label: preset.label,
-        type: "radio",
-        checked: preset.id === currentPresetId
-      }))
+      label: isVisible ? "Hide UI" : "Show UI"
     },
     {
       id: "toggle-always-on-top",

@@ -18,6 +18,10 @@
     align-items: center;
   }
 
+  .desktop-only-control {
+    display: none !important;
+  }
+
   #desktop-drag-bar {
     display: none;
   }
@@ -30,6 +34,10 @@
 
   html[data-shell='desktop'] #app-shell {
     width: 100%;
+  }
+
+  html[data-shell='desktop'] .desktop-only-control {
+    display: inline-flex !important;
   }
 
   html[data-shell='desktop'] #desktop-drag-bar {
@@ -56,6 +64,7 @@
   html[data-shell='desktop'] #debug-controls,
   html[data-shell='desktop'] .zone-action,
   html[data-shell='desktop'] .zone-remove,
+  html[data-shell='desktop'] .desktop-only-control,
   html[data-shell='desktop'] label,
   html[data-shell='desktop'] input,
   html[data-shell='desktop'] select,

@@ -59,26 +59,17 @@ describe("desktop/window-config", () => {
     expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
   });
 
-  test("builds tray menu descriptors for visible, pinned, and preset states", () => {
-    expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true, currentPresetId: "small" })).toEqual([
-      { id: "toggle-visibility", label: "Hide Clock" },
-      {
-        id: "window-size",
-        label: "Window Size",
-        submenu: [
-          { id: "size-xsmall", label: "X-Small", type: "radio", checked: false },
-          { id: "size-small", label: "Small", type: "radio", checked: true },
-          { id: "size-medium", label: "Medium", type: "radio", checked: false }
-        ]
-      },
+  test("builds tray menu descriptors for visible and pinned states", () => {
+    expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true })).toEqual([
+      { id: "toggle-visibility", label: "Hide UI" },
       { id: "toggle-always-on-top", label: "Always on Top", type: "checkbox", checked: true },
       { type: "separator" },
       { id: "quit", label: "Quit" }
     ]);
 
-    expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false, currentPresetId: "medium" })[0]).toEqual({
+    expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false })[0]).toEqual({
       id: "toggle-visibility",
-      label: "Show Clock"
+      label: "Show UI"
     });
   });
 });

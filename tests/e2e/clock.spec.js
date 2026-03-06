@@ -61,6 +61,7 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   const showOuterCity = page.locator('#showOuterCity');
   await expect(showOuterCity).not.toBeChecked();
   await expect(showOuterCity).toBeDisabled();
+  await expect(page.locator('#desktopSizeLabel')).toBeHidden();
 
   const showDebug = page.locator('#showDebug');
   const showDebugFrames = page.locator('#showDebugFrames');

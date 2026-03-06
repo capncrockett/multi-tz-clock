@@ -2,6 +2,7 @@ const path = require("node:path");
 const {
   app,
   BrowserWindow,
+  ipcMain,
   Menu,
   Tray,
   nativeImage
@@ -115,10 +116,6 @@ function buildTrayMenuItem(entry) {
       item.click = quitApplication;
       break;
     default:
-      if (entry.id?.startsWith("size-")) {
-        const presetId = entry.id.slice("size-".length);
-        item.click = () => applyWindowPreset(presetId);
-      }
       break;
   }
 
@@ -133,8 +130,7 @@ function refreshTrayMenu() {
   const win = getMainWindow();
   const entries = createTrayMenuEntries({
     isVisible: !!win?.isVisible(),
-    isAlwaysOnTop: !!win?.isAlwaysOnTop(),
-    currentPresetId: currentWindowPresetId
+    isAlwaysOnTop: !!win?.isAlwaysOnTop()
   });
 
   const template = entries.map(buildTrayMenuItem);
@@ -154,6 +150,7 @@ function applyWindowPreset(presetId) {
 
   isApplyingWindowPreset = true;
   win.setContentSize(preset.width, preset.height);
+  win.webContents.send("desktop:window-size-preset-changed", currentWindowPresetId);
   refreshTrayMenu();
 
   setTimeout(() => {
@@ -233,6 +230,11 @@ function createMainWindow() {
 }
 
 app.setAppUserModelId("com.capnc.multi-tz-clock");
+ipcMain.handle("desktop:get-window-size-preset", () => currentWindowPresetId);
+ipcMain.handle("desktop:set-window-size-preset", (_event, presetId) => {
+  applyWindowPreset(presetId);
+  return currentWindowPresetId;
+});
 
 app.whenReady().then(() => {
   createMainWindow();
