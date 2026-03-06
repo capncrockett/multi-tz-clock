@@ -6,7 +6,7 @@ A single analog clock face with multiple color-coded hour hands, one per time zo
 
 Open `index.html` in any modern browser. No build step, no dependencies.
 
-## Automated Testing (Playwright)
+## Automated Testing
 
 Install dependencies and browser once:
 
@@ -15,10 +15,34 @@ npm install
 npx playwright install chromium
 ```
 
-Run the end-to-end smoke suite:
+Run Node unit + integration tests (Jest):
+
+```bash
+npm run test:node
+```
+
+Run only unit tests:
+
+```bash
+npm run test:unit
+```
+
+Run only integration tests:
+
+```bash
+npm run test:integration
+```
+
+Run the end-to-end smoke suite (Playwright):
 
 ```bash
 npm run test:e2e
+```
+
+Run all suites:
+
+```bash
+npm test
 ```
 
 Useful variants:
@@ -31,7 +55,10 @@ Useful variants:
 
 - `index.html` - Markup and UI structure
 - `assets/css/main.css` - App styles and responsive/theming rules
+- `assets/js/clock-utils.js` - Shared pure logic for layout/tier rules (browser + Node)
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
+- `tests/unit/*.jest.test.js` - Jest unit tests
+- `tests/integration/*.integration.jest.test.js` - Jest integration tests
 - `ARCHITECTURE.md` - Technical deep dive for engineering handoff
 - `ROADMAP.md` - Multi-phase platform plan
 
@@ -39,6 +66,7 @@ Useful variants:
 
 - Up to 6 timezone hands in distinct colors
 - Bezel labels with optional TZ/city text switch, or legend-only mode
+- Three viewport tiers: medium, small, xsmall
 - 12h / 24h toggle
 - 24h face day/night shading via NOAA sunrise/sunset math
 - Add/remove zones from a 31-city catalog
@@ -57,6 +85,8 @@ Phase 1.1 intentionally keeps existing hour-hand behavior and does not yet imple
 - `Sec`: second-hand toggle
 - `24h`: 24-hour face toggle
 - `City`: switches bezel text between TZ abbreviation and city name (disabled when Bezel is off)
+- `Debug`: show live viewport/layout overlay stats
+- `Frames`: show clickable component frame outlines (disabled when Debug is off)
 
 ## Docs
 

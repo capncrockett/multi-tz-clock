@@ -51,8 +51,42 @@ let zones = [
 
 const canvas = document.getElementById('clock');
 const ctx = canvas.getContext('2d');
+const SMALL_BREAKPOINT = 300;
+const XSMALL_BREAKPOINT = 220;
+const DEBUG_FRAME_TARGET_IDS = ['controls', 'clock', 'zone-bar'];
+const ClockUtils = window.ClockUtils || {};
+const deriveViewportFlags = ClockUtils.deriveViewportFlags || ((size, smallBp, xsmallBp) => {
+  const isXSmall = size < xsmallBp;
+  const isSmall = size < smallBp;
+  return { isSmall, isXSmall, tier: isXSmall ? 'xsmall' : (isSmall ? 'small' : 'medium') };
+});
+const is24hNumeralVisible = ClockUtils.is24hNumeralVisible || ((hour, small, xsmall) => {
+  if (xsmall) return hour % 4 === 0;
+  if (small) return hour % 2 === 0;
+  return true;
+});
+const is12hNumeralVisible = ClockUtils.is12hNumeralVisible || ((hour, xsmall) => {
+  if (!xsmall) return true;
+  return hour % 3 === 0;
+});
+const get24hNumeralStyle = ClockUtils.get24hNumeralStyle || ((radius, small, xsmall) => ({
+  fontSize: xsmall ? radius * 0.16 : (small ? radius * 0.14 : radius * 0.09),
+  numeralRadius: xsmall ? radius * 0.84 : (small ? radius * 0.88 : radius * 0.76)
+}));
+const get12hNumeralStyle = ClockUtils.get12hNumeralStyle || ((radius, small, xsmall) => ({
+  fontSize: xsmall ? radius * 0.2 : (small ? radius * 0.18 : radius * 0.14),
+  numeralRadius: xsmall ? radius * 0.82 : (small ? radius * 0.85 : radius * 0.72)
+}));
+const getBezelLabelLayout = ClockUtils.getBezelLabelLayout || ((radius, handLength, small, xsmall) => ({
+  fontSize: xsmall ? 10 : (small ? 12 : 13),
+  bezelRadius: xsmall ? (radius + 12) : Math.min(radius * 0.62, handLength + (small ? 14 : 18))
+}));
 let isSmall = false;
+let isXSmall = false;
+let viewportTier = 'medium';
 let lastSrUpdate = -1;
+let selectedDebugTargetId = '';
+let lastFrameTs = 0;
 
 function isLightMode() {
   return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -71,11 +105,119 @@ function syncCityControlState() {
   cityLabel.classList.toggle('control-disabled', !bezelEnabled);
 }
 
+function isDebugOn() {
+  const el = document.getElementById('showDebug');
+  return !!el && el.checked;
+}
+
+function isDebugFramesOn() {
+  const el = document.getElementById('showDebugFrames');
+  return isDebugOn() && !!el && el.checked;
+}
+
+function syncDebugFrameSelection() {
+  for (const id of DEBUG_FRAME_TARGET_IDS) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const selected = isDebugFramesOn() && id === selectedDebugTargetId;
+    el.classList.toggle('debug-frame-selected', selected);
+  }
+}
+
+function setDebugFrameSelection(id) {
+  selectedDebugTargetId = id || '';
+  syncDebugFrameSelection();
+}
+
+function syncDebugControlState() {
+  const debugToggle = document.getElementById('showDebug');
+  const framesToggle = document.getElementById('showDebugFrames');
+  const framesLabel = document.getElementById('showDebugFramesLabel');
+  if (!debugToggle || !framesToggle || !framesLabel) return;
+
+  const debugEnabled = debugToggle.checked;
+  if (!debugEnabled) {
+    framesToggle.checked = false;
+    selectedDebugTargetId = '';
+  }
+  framesToggle.disabled = !debugEnabled;
+  framesLabel.classList.toggle('control-disabled', !debugEnabled);
+
+  document.body.classList.toggle('debug-on', debugEnabled);
+  document.body.classList.toggle('debug-frames-on', debugEnabled && framesToggle.checked);
+  syncDebugFrameSelection();
+}
+
+function setupDebugFrameTargets() {
+  for (const id of DEBUG_FRAME_TARGET_IDS) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener('click', (event) => {
+      if (!isDebugFramesOn()) return;
+      if (id === 'controls' && event.target.closest('input,button,select,label')) return;
+      event.stopPropagation();
+      setDebugFrameSelection(id);
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!isDebugFramesOn()) return;
+    const inTarget = event.target.closest('#controls,#clock,#zone-bar');
+    if (!inTarget) {
+      setDebugFrameSelection('');
+    }
+  });
+}
+
+function updateDebugOverlay(size, r, dedupedCount, frameMs) {
+  const main = document.getElementById('debug-main');
+  const selected = document.getElementById('debug-selected');
+  if (!main || !selected || !isDebugOn()) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const fps = frameMs > 0 ? (1000 / frameMs) : 0;
+  const bezelOn = document.getElementById('showBezelLabels')?.checked;
+  const cityOn = document.getElementById('showOuterCity')?.checked;
+  const secOn = document.getElementById('showSeconds')?.checked;
+  const use24 = document.getElementById('use24h')?.checked;
+
+  main.textContent = [
+    `viewport: ${window.innerWidth} x ${window.innerHeight}`,
+    `canvas: ${Math.round(size)}px (r=${Math.round(r)})`,
+    `dpr: ${dpr.toFixed(2)}  tier: ${viewportTier}`,
+    `zones: active=${zones.length} deduped=${dedupedCount}`,
+    `toggles: bezel=${bezelOn} city=${cityOn} sec=${secOn} 24h=${use24}`,
+    `frame: ${frameMs.toFixed(1)}ms (${fps.toFixed(1)} fps)`
+  ].join('\n');
+
+  if (!selectedDebugTargetId) {
+    selected.textContent = 'selected: none\n(click a dashed frame)';
+    return;
+  }
+
+  const el = document.getElementById(selectedDebugTargetId);
+  if (!el) {
+    selected.textContent = 'selected: none';
+    return;
+  }
+
+  const rect = el.getBoundingClientRect();
+  selected.textContent = [
+    `selected: #${selectedDebugTargetId}`,
+    `x=${Math.round(rect.left)} y=${Math.round(rect.top)}`,
+    `w=${Math.round(rect.width)} h=${Math.round(rect.height)}`
+  ].join('\n');
+}
+
 // ── SIZING ──────────────────────────────────────────────────────────
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(window.innerWidth - 32, window.innerHeight - 220, 600);
-  isSmall = size < 300;
+  const rawSize = Math.min(window.innerWidth - 32, window.innerHeight - 220, 600);
+  const size = Math.max(rawSize, 120);
+  const flags = deriveViewportFlags(size, SMALL_BREAKPOINT, XSMALL_BREAKPOINT);
+  isXSmall = flags.isXSmall;
+  isSmall = flags.isSmall;
+  viewportTier = flags.tier;
   canvas.width = size * dpr;
   canvas.height = size * dpr;
   canvas.style.width = size + 'px';
@@ -85,7 +227,11 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 document.getElementById('showBezelLabels').addEventListener('change', syncCityControlState);
+document.getElementById('showDebug').addEventListener('change', syncDebugControlState);
+document.getElementById('showDebugFrames').addEventListener('change', syncDebugControlState);
 syncCityControlState();
+syncDebugControlState();
+setupDebugFrameTargets();
 
 // ── HELPERS ─────────────────────────────────────────────────────────
 
@@ -229,7 +375,7 @@ function renderZoneBar() {
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
     const day = isDaytime(z.tz);
     const dayClass = day ? 'zone-day' : 'zone-night';
-    return `<span class="zone-item ${dayClass}" role="listitem" data-tz="${z.tz}">
+    return `<span class="zone-item ${dayClass}" role="listitem" data-tz="${z.tz}" style="--zone-color:${z.color}">
       <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
       <span>${z.label}</span>
       <span class="zone-time">${timeStr}</span>
@@ -258,6 +404,9 @@ function updateZoneBarTimes() {
   const items = document.querySelectorAll('.zone-item[data-tz]');
   for (const item of items) {
     const tz = item.dataset.tz;
+    const day = isDaytime(tz);
+    item.classList.toggle('zone-day', day);
+    item.classList.toggle('zone-night', !day);
     const t = getTimeInTZ(tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
     const timeEl = item.querySelector('.zone-time');
@@ -380,30 +529,31 @@ function drawFace(cx, cy, r) {
   }
 
   // Numerals
-  const count = use24 ? 24 : 12;
   if (use24) {
-    // 24h: inside ticks on large, replacing ticks on small
-    const fontSize = isSmall ? r * 0.14 : r * 0.09;
-    const numR = isSmall ? r * 0.88 : r * 0.76;
+    // 24h: progressively reduce density on smaller tiers.
+    const numeralStyle = get24hNumeralStyle(r, isSmall, isXSmall);
+    const fontSize = numeralStyle.fontSize;
+    const numR = numeralStyle.numeralRadius;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let n = 1; n <= 24; n++) {
-      // On small viewports, show only even hours to reduce clutter
-      if (isSmall && n % 2 !== 0) continue;
+      if (!is24hNumeralVisible(n, isSmall, isXSmall)) continue;
       const angle = (n / 24) * Math.PI * 2 - Math.PI / 2;
       ctx.fillText(n.toString(), cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
     }
   } else {
-    // 12h: on small viewports push to outer edge (replacing ticks)
-    const fontSize = isSmall ? r * 0.18 : r * 0.14;
-    const numR = isSmall ? r * 0.85 : r * 0.72;
+    // 12h: xsmall shows quarter markers to keep numerals legible.
+    const numeralStyle = get12hNumeralStyle(r, isSmall, isXSmall);
+    const fontSize = numeralStyle.fontSize;
+    const numR = numeralStyle.numeralRadius;
     ctx.fillStyle = light ? '#222' : '#ddd';
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let n = 1; n <= 12; n++) {
+      if (!is12hNumeralVisible(n, isXSmall)) continue;
       const angle = (n / 12) * Math.PI * 2 - Math.PI / 2;
       ctx.fillText(n.toString(), cx + Math.cos(angle) * numR, cy + Math.sin(angle) * numR);
     }
@@ -437,20 +587,24 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, showBezelLa
   ctx.stroke();
   ctx.restore();
 
-  // Bezel label: high-contrast inner rim chip. Checkbox switches TZ <-> city text.
+  // Bezel label: one shared chip component (TZ or City text) with TZ-local day/night styling.
   if (label && showBezelLabel) {
     const light = isLightMode();
+    const day = isDaytime(tz);
     const showCityInBezel = document.getElementById('showOuterCity').checked;
     const tzAbbrev = getTzAbbrev(tz);
     const bezelText = showCityInBezel ? label : tzAbbrev;
-    const fs = isSmall ? 12 : 13;
-    const bezelR = Math.min(r * 0.62, length + (isSmall ? 14 : 18));
+    const bezelLayout = getBezelLabelLayout(r, length, isSmall, isXSmall);
+    const fs = bezelLayout.fontSize;
+    const bezelR = bezelLayout.bezelRadius;
     const bx = cx + Math.cos(angle) * bezelR;
     const by = cy + Math.sin(angle) * bezelR;
     const needsFlip = angle > 0 && angle < Math.PI;
 
-    const bezelBg = light ? 'rgba(18,24,36,0.92)' : 'rgba(245,248,255,0.94)';
-    const bezelTextColor = light ? '#ffffff' : '#0f1b2d';
+    const bezelBg = day
+      ? (light ? 'rgba(255,246,216,0.96)' : 'rgba(247,229,180,0.94)')
+      : (light ? 'rgba(28,41,74,0.95)' : 'rgba(12,24,46,0.94)');
+    const bezelTextColor = day ? '#1f1700' : '#f3f7ff';
 
     ctx.save();
     ctx.translate(bx, by);
@@ -536,6 +690,10 @@ function updateScreenReader(deduped) {
 
 // ── MAIN LOOP ───────────────────────────────────────────────────────
 function draw() {
+  const frameNow = performance.now();
+  const frameMs = lastFrameTs > 0 ? (frameNow - lastFrameTs) : 0;
+  lastFrameTs = frameNow;
+
   const size = parseFloat(canvas.style.width);
   const cx = size / 2;
   const cy = size / 2;
@@ -560,6 +718,7 @@ function draw() {
   drawMinuteSecondHands(cx, cy, r);
   updateZoneBarTimes();
   updateScreenReader(deduped);
+  updateDebugOverlay(size, r, deduped.length, frameMs);
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     setTimeout(() => requestAnimationFrame(draw), 1000);

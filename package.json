@@ -4,7 +4,11 @@
   "description": "A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:e2e",
+    "test": "npm run test:all",
+    "test:all": "npm run test:node && npm run test:e2e",
+    "test:node": "jest --config jest.config.cjs --runInBand",
+    "test:unit": "jest --config jest.config.cjs tests/unit --runInBand",
+    "test:integration": "jest --config jest.config.cjs tests/integration --runInBand",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -22,7 +26,8 @@
   },
   "homepage": "https://github.com/capncrockett/multi-tz-clock#readme",
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "jest": "^30.2.0"
   },
   "private": true
 }

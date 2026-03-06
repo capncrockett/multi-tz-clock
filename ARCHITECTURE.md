@@ -7,10 +7,14 @@ This document is written for AI coding agents and engineers migrating this proje
 ```
 index.html           - App shell markup and DOM structure
 assets/css/main.css  - All styles (theme vars, layout, accessibility, responsive rules)
+assets/js/clock-utils.js - Shared pure layout/tier helpers (browser + Node)
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
+tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
+tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
 tests/e2e/*.spec.js  - Playwright browser smoke tests
+jest.config.cjs      - Jest config
 playwright.config.js - Playwright test runner config (Chromium project)
-package.json         - npm scripts for running e2e tests
+package.json         - npm scripts for node + e2e tests
 ROADMAP.md           - Browser -> Desktop -> Windows -> Apple -> Android plan
 ARCHITECTURE.md      - This file
 README.md            - User-facing overview
@@ -29,7 +33,9 @@ Contains:
 - `<canvas id="clock">`
 - `#sr-times` live region
 - `#zone-bar`
-4. External script reference: `assets/js/app.js` (classic `defer` script).
+4. External script references (both `defer`):
+- `assets/js/clock-utils.js`
+- `assets/js/app.js`
 
 ### `assets/css/main.css`
 Contains:
@@ -54,17 +60,36 @@ Contains these logical sections:
 - ACCESSIBILITY: `updateScreenReader()`
 - MAIN LOOP: `draw()`
 
+### `assets/js/clock-utils.js`
+Contains pure functions used by both browser runtime and Jest tests:
+
+- `deriveViewportFlags()`
+- `is24hNumeralVisible()`, `is12hNumeralVisible()`
+- `get24hNumeralStyle()`, `get12hNumeralStyle()`
+- `getBezelLabelLayout()`
+
 ## Automated Browser Testing
 
 - Framework: Playwright (`@playwright/test`).
 - Spec location: `tests/e2e/clock.spec.js`.
 - Current smoke coverage:
 - app load/runtime error check
-- control toggles and label mode changes
+- control toggles and debug dependencies
 - zone add/remove flow
 - compact sizing at small viewport
+- dynamic tier transitions (`small` -> `xsmall`)
 - key accessibility hooks (`skip-link`, toolbar/list roles, live region)
 - Run with: `npm run test:e2e`.
+
+## Automated Node Testing
+
+- Framework: Jest.
+- Unit tests: `tests/unit/*.jest.test.js`
+- Integration tests: `tests/integration/*.integration.jest.test.js`
+- Run with:
+- `npm run test:unit`
+- `npm run test:integration`
+- `npm run test:node`
 
 ## Rendering Pipeline (Per Frame)
 
@@ -83,6 +108,8 @@ draw()
 
 - `zones`: Source of truth for active time zones.
 - `isSmall`: Compact-rendering flag for small canvas sizes.
+- `isXSmall`: Extra-small rendering flag.
+- `viewportTier`: `medium | small | xsmall`.
 - `lastSrUpdate`: Minute-level throttle for live region announcements.
 - UI control state is read from DOM each frame.
 

@@ -40,6 +40,11 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   await expect(showOuterCity).toBeChecked();
   await expect(showOuterCity).toBeDisabled();
 
+  const showDebug = page.locator('#showDebug');
+  const showDebugFrames = page.locator('#showDebugFrames');
+  await expect(showDebug).not.toBeChecked();
+  await expect(showDebugFrames).toBeDisabled();
+
   const use24h = page.locator('#use24h');
   await expect(use24h).not.toBeChecked();
   await use24h.check();
@@ -55,6 +60,12 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   await expect(showOuterCity).toBeEnabled();
   await showOuterCity.uncheck();
   await expect(showOuterCity).not.toBeChecked();
+
+  await showDebug.check();
+  await expect(showDebug).toBeChecked();
+  await expect(showDebugFrames).toBeEnabled();
+  await showDebugFrames.check();
+  await expect(showDebugFrames).toBeChecked();
 });
 
 test('zone add and remove flow updates chip count', async ({ page }) => {
@@ -80,7 +91,7 @@ test('zone add and remove flow updates chip count', async ({ page }) => {
   await expect(zones).toHaveCount(initialCount);
 });
 
-test('small viewport triggers compact canvas sizing', async ({ page }) => {
+test('small and xsmall viewport tiers update dynamically', async ({ page }) => {
   await page.setViewportSize({ width: 280, height: 500 });
   await gotoApp(page);
 
@@ -103,6 +114,14 @@ test('small viewport triggers compact canvas sizing', async ({ page }) => {
     return parseFloat(canvas.style.width || '0');
   });
   expect(canvasCssWidth).toBeLessThan(300);
+
+  const showDebug = page.locator('#showDebug');
+  await showDebug.check();
+  const debugMain = page.locator('#debug-main');
+  await expect(debugMain).toContainText('tier: small');
+
+  await page.setViewportSize({ width: 200, height: 420 });
+  await expect(debugMain).toContainText('tier: xsmall');
 });
 
 test('accessibility hooks are present', async ({ page }) => {

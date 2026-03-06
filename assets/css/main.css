@@ -7,6 +7,14 @@
     --text: #eeeeee;
     --text-muted: #aaaaaa;
     --accent: #e94560;
+    --zone-day-bg: #fdf6e3;
+    --zone-day-text: #1a1000;
+    --zone-day-time: #5a4a20;
+    --zone-day-remove: #8a7a50;
+    --zone-night-bg: #0d1321;
+    --zone-night-text: #eef0f8;
+    --zone-night-time: #a0b0d0;
+    --zone-night-remove: #7080a0;
   }
 
   @media (prefers-color-scheme: light) {
@@ -17,6 +25,14 @@
       --text: #1a1a2e;
       --text-muted: #555555;
       --accent: #c0392b;
+      --zone-day-bg: #fff7e3;
+      --zone-day-text: #2a1e00;
+      --zone-day-time: #6a5730;
+      --zone-day-remove: #8f7b4a;
+      --zone-night-bg: #2a2a3e;
+      --zone-night-text: #eef0f8;
+      --zone-night-time: #b0b8d0;
+      --zone-night-remove: #8890a8;
     }
   }
 
@@ -91,11 +107,12 @@
     max-width: 640px;
   }
   .zone-item {
+    --zone-color: var(--border);
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: var(--bg-surface);
-    border: 1px solid var(--border);
+    border: 2px solid var(--zone-color);
     border-radius: 16px;
     padding: 4px 10px 4px 8px;
     font-size: 14px;
@@ -105,32 +122,21 @@
   .zone-swatch {
     width: 12px; height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--text-muted);
+    border: 2px solid var(--zone-color);
     flex-shrink: 0;
   }
   .zone-item.zone-day {
-    background: #fdf6e3;
-    border-color: #d4a843;
-    color: #1a1000;
+    background: var(--zone-day-bg);
+    color: var(--zone-day-text);
   }
-  .zone-item.zone-day .zone-time { color: #5a4a20; }
-  .zone-item.zone-day .zone-remove { color: #8a7a50; }
+  .zone-item.zone-day .zone-time { color: var(--zone-day-time); }
+  .zone-item.zone-day .zone-remove { color: var(--zone-day-remove); }
   .zone-item.zone-night {
-    background: #0d1321;
-    border-color: #2a3a5c;
-    color: #eef0f8;
+    background: var(--zone-night-bg);
+    color: var(--zone-night-text);
   }
-  .zone-item.zone-night .zone-time { color: #a0b0d0; }
-  .zone-item.zone-night .zone-remove { color: #7080a0; }
-  @media (prefers-color-scheme: light) {
-    .zone-item.zone-night {
-      background: #2a2a3e;
-      border-color: #444466;
-      color: #eef0f8;
-    }
-    .zone-item.zone-night .zone-time { color: #b0b8d0; }
-    .zone-item.zone-night .zone-remove { color: #8890a8; }
-  }
+  .zone-item.zone-night .zone-time { color: var(--zone-night-time); }
+  .zone-item.zone-night .zone-remove { color: var(--zone-night-remove); }
   .zone-time {
     font-family: 'Cascadia Mono', 'Consolas', monospace;
     font-size: 13px;
@@ -161,6 +167,85 @@
   #zone-bar select:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .debug-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 300;
+    display: none;
+  }
+  #debug-controls {
+    position: fixed;
+    left: 8px;
+    bottom: 8px;
+    z-index: 320;
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(8, 12, 20, 0.88);
+    color: #f0f6ff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12px;
+  }
+  #debug-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  #debug-controls label.control-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #debug-controls label.control-disabled input {
+    cursor: not-allowed;
+  }
+  @media (prefers-color-scheme: light) {
+    #debug-controls {
+      background: rgba(245, 247, 252, 0.95);
+      color: #101727;
+      border-color: rgba(0, 0, 0, 0.22);
+    }
+  }
+  body.debug-on .debug-overlay {
+    display: block;
+  }
+  .debug-panel {
+    position: absolute;
+    max-width: min(360px, calc(100vw - 16px));
+    background: rgba(8, 12, 20, 0.9);
+    color: #f0f6ff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'Cascadia Mono', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: pre-line;
+  }
+  .debug-main { top: 8px; left: 8px; }
+  .debug-selected { top: 8px; right: 8px; text-align: right; }
+  @media (prefers-color-scheme: light) {
+    .debug-panel {
+      background: rgba(245, 247, 252, 0.95);
+      color: #101727;
+      border-color: rgba(0, 0, 0, 0.28);
+    }
+  }
+
+  body.debug-frames-on #controls,
+  body.debug-frames-on #clock,
+  body.debug-frames-on #zone-bar {
+    outline: 2px dashed rgba(233, 69, 96, 0.85);
+    outline-offset: 2px;
+  }
+  .debug-frame-selected {
+    outline: 3px solid var(--accent) !important;
+    outline-offset: 3px !important;
   }
 
   .sr-only {

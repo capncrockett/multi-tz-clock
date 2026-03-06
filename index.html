@@ -21,7 +21,16 @@
 
 <div id="sr-times" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <div id="zone-bar" role="list" aria-label="Active time zones"></div>
+<div id="debug-overlay" class="debug-overlay" aria-hidden="true">
+  <div id="debug-main" class="debug-panel debug-main"></div>
+  <div id="debug-selected" class="debug-panel debug-selected"></div>
+</div>
+<div id="debug-controls" role="group" aria-label="Debug options">
+  <label><input type="checkbox" id="showDebug"> Debug</label>
+  <label id="showDebugFramesLabel"><input type="checkbox" id="showDebugFrames"> Frames</label>
+</div>
 
+<script defer src="assets/js/clock-utils.js"></script>
 <script defer src="assets/js/app.js"></script>
 </body>
 </html>
