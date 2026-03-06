@@ -1,6 +1,6 @@
 const path = require('path');
 const { pathToFileURL } = require('url');
-const { test, expect } = require('@playwright/test');
+const { test, expect, chromium } = require('@playwright/test');
 
 const APP_URL = pathToFileURL(path.resolve(__dirname, '../../index.html')).href;
 
@@ -136,6 +136,43 @@ test('persists zones and display toggles across reloads', async ({ page }) => {
   await expect(page.locator('.zone-item', { hasText: zoneToAdd.label })).toBeVisible();
 });
 
+test('persists zones and display toggles across browser restart', async ({ browserName }, testInfo) => {
+  test.skip(browserName !== 'chromium', 'Persistent context coverage is only needed for Chromium.');
+
+  const userDataDir = path.join(testInfo.outputDir, 'restart-profile');
+  let context;
+
+  try {
+    context = await chromium.launchPersistentContext(userDataDir, { headless: true });
+    let page = context.pages()[0] || await context.newPage();
+    await page.goto(APP_URL);
+    await expect(page.locator('#clock')).toBeVisible();
+
+    const addSelect = page.locator('#addTzSelect');
+    const zoneToAdd = await addSelect.evaluate((el) => {
+      const option = Array.from(el.options).find((entry) => entry.value);
+      return option ? { value: option.value, label: option.textContent } : null;
+    });
+    expect(zoneToAdd).not.toBeNull();
+
+    await page.locator('#showBezelLabels').check();
+    await addSelect.selectOption(zoneToAdd.value);
+    await context.close();
+
+    context = await chromium.launchPersistentContext(userDataDir, { headless: true });
+    page = context.pages()[0] || await context.newPage();
+    await page.goto(APP_URL);
+    await expect(page.locator('#clock')).toBeVisible();
+
+    await expect(page.locator('#showBezelLabels')).toBeChecked();
+    await expect(page.locator('.zone-item', { hasText: zoneToAdd.label })).toBeVisible();
+  } finally {
+    if (context) {
+      await context.close();
+    }
+  }
+});
+
 test('local zone action adds the nearest catalog city from geolocation', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'geolocation', {
@@ -166,8 +203,8 @@ test('sub-hour offsets keep separate hour hands in the deduped count', async ({ 
   await freezeTime(page, '2026-03-06T12:10:00Z');
   await gotoApp(page);
 
-  await page.locator('#addTzSelect').selectOption('Asia/Karachi');
-  await page.locator('#addTzSelect').selectOption('Asia/Kolkata');
+  await page.locator('#addTzSelect').selectOption({ label: 'Karachi' });
+  await page.locator('#addTzSelect').selectOption({ label: 'Mumbai' });
   await page.locator('#showDebug').check();
 
   await expect(page.locator('#debug-main')).toContainText('active=6 deduped=6');

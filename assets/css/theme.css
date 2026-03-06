@@ -1,0 +1,70 @@
+:root {
+  --bg: #1a1a2e;
+  --bg-surface: #16213e;
+  --border: #0f3460;
+  --text: #eeeeee;
+  --text-muted: #aaaaaa;
+  --accent: #e94560;
+
+  --zone-day-bg: #f4f7ff;
+  --zone-day-text: #101727;
+  --zone-day-time: #4d5b75;
+  --zone-day-remove: #677691;
+  --zone-night-bg: #0d1321;
+  --zone-night-text: #eef0f8;
+  --zone-night-time: #a0b0d0;
+  --zone-night-remove: #7080a0;
+
+  --clock-face-day: #2e3a1e;
+  --clock-face-day-center: #3d4a28;
+  --clock-face-night: #0d1321;
+  --clock-face-mid: #1a2418;
+  --clock-face-horizon: #151d18;
+  --clock-face-solid: #16213e;
+  --clock-ring: #0f3460;
+  --clock-tick-major: #eeeeee;
+  --clock-tick-minor: #555555;
+  --clock-number: #dddddd;
+  --clock-center-dot: #eeeeee;
+  --clock-minute-hand: #bbbbbb;
+  --clock-second-hand: #e94560;
+
+  --clock-bezel-day-bg: var(--zone-day-bg);
+  --clock-bezel-day-text: var(--zone-day-text);
+  --clock-bezel-night-bg: var(--zone-night-bg);
+  --clock-bezel-night-text: var(--zone-night-text);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f0f0f5;
+    --bg-surface: #ffffff;
+    --border: #c0c0d0;
+    --text: #1a1a2e;
+    --text-muted: #555555;
+    --accent: #c0392b;
+
+    --zone-day-bg: #ffffff;
+    --zone-day-text: #1a1a2e;
+    --zone-day-time: #54627f;
+    --zone-day-remove: #6f7c97;
+    --zone-night-bg: #2a2a3e;
+    --zone-night-text: #eef0f8;
+    --zone-night-time: #b0b8d0;
+    --zone-night-remove: #8890a8;
+
+    --clock-face-day: #f5e6c8;
+    --clock-face-day-center: #fdf0d5;
+    --clock-face-night: #d0cfc8;
+    --clock-face-mid: #e8d8b8;
+    --clock-face-horizon: #ddd0b0;
+    --clock-face-solid: #ebe8e0;
+    --clock-ring: #b0b0b8;
+    --clock-tick-major: #333333;
+    --clock-tick-minor: #999999;
+    --clock-number: #222222;
+    --clock-center-dot: #333333;
+    --clock-minute-hand: #444444;
+    --clock-second-hand: #c0392b;
+  }
+}

@@ -40,13 +40,24 @@ const HAND_COLORS = [
   '#e94560', '#4e9af1', '#2ecc71', '#e9b44c', '#9b59b6', '#e67e22',
 ];
 const MAX_ZONES = HAND_COLORS.length;
-const STORAGE_KEY = 'multi-tz-clock:v1';
+const STORAGE_KEY = 'multi-tz-clock:v2';
+const STORAGE_DB_NAME = 'multi-tz-clock';
+const STORAGE_STORE_NAME = 'app-state';
+const STORAGE_ITEM_KEY = 'state';
 const PERSISTED_CONTROL_IDS = ['showBezelLabels', 'showOuterCity', 'showSeconds', 'use24h'];
+let nextZoneId = 1;
+function createZone(label, tz, color, id = nextZoneId++) {
+  nextZoneId = Math.max(nextZoneId, id + 1);
+  return { id, label, tz, color };
+}
+function getCityKey(city) {
+  return `${city.label}::${city.tz}`;
+}
 const DEFAULT_ZONES = [
-  { label: 'NYC',    tz: 'America/New_York',    color: HAND_COLORS[0] },
-  { label: 'London', tz: 'Europe/London',       color: HAND_COLORS[1] },
-  { label: 'Tokyo',  tz: 'Asia/Tokyo',          color: HAND_COLORS[2] },
-  { label: 'Sydney', tz: 'Australia/Sydney',    color: HAND_COLORS[3] },
+  createZone('NYC', 'America/New_York', HAND_COLORS[0]),
+  createZone('London', 'Europe/London', HAND_COLORS[1]),
+  createZone('Tokyo', 'Asia/Tokyo', HAND_COLORS[2]),
+  createZone('Sydney', 'Australia/Sydney', HAND_COLORS[3]),
 ];
 
 // ── STATE ───────────────────────────────────────────────────────────
@@ -84,6 +95,9 @@ const getBezelLabelLayout = ClockUtils.getBezelLabelLayout || ((radius, handLeng
   fontSize: xsmall ? 10 : (small ? 12 : 13),
   bezelRadius: xsmall ? (radius + 12) : Math.min(radius * 0.62, handLength + (small ? 14 : 18))
 }));
+const getBezelLabelOffsets = ClockUtils.getBezelLabelOffsets || ((count, spacing) => (
+  count <= 1 ? [0] : [-(spacing / 2), spacing / 2]
+));
 const getHourHandValue = ClockUtils.getHourHandValue || ((timeParts, use24) => {
   const hour = use24 ? timeParts.h24 : timeParts.h;
   return hour + (timeParts.m / 60);
@@ -127,13 +141,95 @@ function isLightMode() {
 function is24h() {
   return document.getElementById('use24h').checked;
 }
+let cachedThemePalette = null;
+let cachedThemeKey = '';
 
-function getStorage() {
+function getThemePalette() {
+  const themeKey = `${document.documentElement.dataset.theme || ''}:${isLightMode() ? 'light' : 'dark'}`;
+  if (cachedThemePalette && cachedThemeKey === themeKey) {
+    return cachedThemePalette;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const readToken = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+  cachedThemeKey = themeKey;
+  cachedThemePalette = {
+    faceDay: readToken('--clock-face-day', '#2e3a1e'),
+    faceDayCenter: readToken('--clock-face-day-center', '#3d4a28'),
+    faceNight: readToken('--clock-face-night', '#0d1321'),
+    faceMid: readToken('--clock-face-mid', '#1a2418'),
+    faceHorizon: readToken('--clock-face-horizon', '#151d18'),
+    faceSolid: readToken('--clock-face-solid', '#16213e'),
+    ring: readToken('--clock-ring', '#0f3460'),
+    tickMajor: readToken('--clock-tick-major', '#eeeeee'),
+    tickMinor: readToken('--clock-tick-minor', '#555555'),
+    numeral: readToken('--clock-number', '#dddddd'),
+    centerDot: readToken('--clock-center-dot', '#eeeeee'),
+    minuteHand: readToken('--clock-minute-hand', '#bbbbbb'),
+    secondHand: readToken('--clock-second-hand', '#e94560'),
+    bezelDayBg: readToken('--clock-bezel-day-bg', readToken('--zone-day-bg', '#ffffff')),
+    bezelDayText: readToken('--clock-bezel-day-text', readToken('--zone-day-text', '#101727')),
+    bezelNightBg: readToken('--clock-bezel-night-bg', readToken('--zone-night-bg', '#0d1321')),
+    bezelNightText: readToken('--clock-bezel-night-text', readToken('--zone-night-text', '#eef0f8'))
+  };
+  return cachedThemePalette;
+}
+
+function getLocalStorage() {
   try {
     return window.localStorage;
   } catch {
     return null;
   }
+}
+
+function openStorageDb() {
+  if (!window.indexedDB) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const request = window.indexedDB.open(STORAGE_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORAGE_STORE_NAME)) {
+          db.createObjectStore(STORAGE_STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB open failed.'));
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function readIndexedDbState() {
+  const db = await openStorageDb();
+  if (!db) return null;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORAGE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORAGE_STORE_NAME);
+    const request = store.get(STORAGE_ITEM_KEY);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error || new Error('IndexedDB read failed.'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => db.close();
+    tx.onabort = () => db.close();
+  });
+}
+
+async function writeIndexedDbState(value) {
+  const db = await openStorageDb();
+  if (!db) return;
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORAGE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORAGE_STORE_NAME);
+    store.put(value, STORAGE_ITEM_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error || new Error('IndexedDB write failed.'));
+    tx.onabort = () => reject(tx.error || new Error('IndexedDB write aborted.'));
+  }).finally(() => db.close());
 }
 
 function announceStatus(message) {
@@ -158,63 +254,93 @@ function sanitizePersistedZones(value) {
   if (!Array.isArray(value)) return null;
   const validTzs = new Set(CITY_CATALOG.map((city) => city.tz));
   const seen = new Set();
+  const seenIds = new Set();
   const out = [];
 
   for (const zone of value) {
     if (!zone || typeof zone !== 'object') continue;
-    if (typeof zone.tz !== 'string' || !validTzs.has(zone.tz) || seen.has(zone.tz)) continue;
-    const city = CITY_CATALOG.find((entry) => entry.tz === zone.tz);
+    if (typeof zone.tz !== 'string' || !validTzs.has(zone.tz)) continue;
+    const label = typeof zone.label === 'string' && zone.label.trim()
+      ? zone.label.trim()
+      : (CITY_CATALOG.find((entry) => entry.tz === zone.tz)?.label || '');
+    const cityKey = `${label}::${zone.tz}`;
+    if (!label || seen.has(cityKey)) continue;
+    const city = CITY_CATALOG.find((entry) => entry.tz === zone.tz && entry.label === label)
+      || CITY_CATALOG.find((entry) => entry.tz === zone.tz);
     if (!city) continue;
     const color = HAND_COLORS.includes(zone.color) ? zone.color : HAND_COLORS[out.length % HAND_COLORS.length];
-    out.push({
-      label: typeof zone.label === 'string' && zone.label.trim() ? zone.label : city.label,
-      tz: city.tz,
-      color
-    });
-    seen.add(city.tz);
+    const persistedId = Number.isInteger(zone.id) && zone.id > 0 && !seenIds.has(zone.id)
+      ? zone.id
+      : nextZoneId++;
+    out.push(createZone(label || city.label, city.tz, color, persistedId));
+    seen.add(cityKey);
+    seenIds.add(persistedId);
     if (out.length >= MAX_ZONES) break;
   }
 
   return out.length > 0 ? out : null;
 }
 
-function restorePersistedState() {
-  const storage = getStorage();
-  if (!storage) return;
-
+async function readPersistedState() {
+  const storage = getLocalStorage();
   try {
-    const raw = storage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    const restoredZones = sanitizePersistedZones(parsed?.zones);
-    if (restoredZones) {
-      zones = restoredZones;
-    }
-
-    if (parsed?.controls && typeof parsed.controls === 'object') {
-      for (const id of PERSISTED_CONTROL_IDS) {
-        const el = document.getElementById(id);
-        if (!el || typeof parsed.controls[id] !== 'boolean') continue;
-        el.checked = parsed.controls[id];
+    if (storage) {
+      const raw = storage.getItem(STORAGE_KEY);
+      if (raw) {
+        return JSON.parse(raw);
       }
     }
   } catch {
-    // Ignore malformed or unavailable persisted state and keep defaults.
+    // Fall back to IndexedDB when localStorage is unavailable or malformed.
+  }
+
+  try {
+    return await readIndexedDbState();
+  } catch {
+    return null;
+  }
+}
+
+async function restorePersistedState() {
+  const parsed = await readPersistedState();
+  if (!parsed || typeof parsed !== 'object') return;
+
+  const restoredZones = sanitizePersistedZones(parsed.zones);
+  if (restoredZones) {
+    zones = restoredZones;
+  }
+
+  if (parsed.controls && typeof parsed.controls === 'object') {
+    for (const id of PERSISTED_CONTROL_IDS) {
+      const el = document.getElementById(id);
+      if (!el || typeof parsed.controls[id] !== 'boolean') continue;
+      el.checked = parsed.controls[id];
+    }
+  }
+}
+
+async function writePersistedState(value) {
+  const storage = getLocalStorage();
+  try {
+    if (storage) {
+      storage.setItem(STORAGE_KEY, JSON.stringify(value));
+    }
+  } catch {
+    // Ignore and continue to IndexedDB fallback below.
+  }
+
+  try {
+    await writeIndexedDbState(value);
+  } catch {
+    // Ignore quota/security failures so rendering still works offline and from file URLs.
   }
 }
 
 function persistAppState() {
-  const storage = getStorage();
-  if (!storage) return;
-
-  try {
-    storage.setItem(STORAGE_KEY, JSON.stringify({
-      zones,
-      controls: getPersistedControlState()
-    }));
-  } catch {
-    // Ignore quota/security failures so rendering still works offline and from file URLs.
-  }
+  void writePersistedState({
+    zones,
+    controls: getPersistedControlState()
+  });
 }
 
 function syncCityControlState() {
@@ -347,20 +473,6 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 window.addEventListener('resize', resize);
-restorePersistedState();
-resize();
-document.getElementById('showBezelLabels').addEventListener('change', () => {
-  syncCityControlState();
-  persistAppState();
-});
-document.getElementById('showOuterCity').addEventListener('change', persistAppState);
-document.getElementById('showSeconds').addEventListener('change', persistAppState);
-document.getElementById('use24h').addEventListener('change', persistAppState);
-document.getElementById('showDebug').addEventListener('change', syncDebugControlState);
-document.getElementById('showDebugFrames').addEventListener('change', syncDebugControlState);
-syncCityControlState();
-syncDebugControlState();
-setupDebugFrameTargets();
 
 // ── HELPERS ─────────────────────────────────────────────────────────
 
@@ -472,11 +584,15 @@ function dedupeZones(list, use24) {
     const key = getZoneGroupKey(t, use24);
     if (map.has(key)) {
       const existing = map.get(key);
-      if (!existing.label.includes(z.label)) {
-        existing.label += ' / ' + z.label;
-      }
+      existing.labels.push({ ...z, _time: t });
     } else {
-      map.set(key, { ...z, label: z.label, _time: t });
+      map.set(key, {
+        id: z.id,
+        tz: z.tz,
+        color: z.color,
+        _time: t,
+        labels: [{ ...z, _time: t }]
+      });
     }
   }
   return Array.from(map.values());
@@ -507,11 +623,11 @@ function finishAddingLocalZone(city, source) {
     announceStatus('Local timezone is not available in the current city catalog.');
     return;
   }
-  if (zones.some((zone) => zone.tz === city.tz)) {
+  if (zones.some((zone) => getCityKey(zone) === getCityKey(city))) {
     announceStatus(`${city.label} is already on the clock.`);
     return;
   }
-  const added = addZone(city.tz, { persist: true });
+  const added = addZone(city, { persist: true });
   if (!added) {
     announceStatus('Unable to add another timezone right now.');
     return;
@@ -546,24 +662,24 @@ function renderZoneBar() {
   const sorted = sortByTime(zones.map(z => ({ ...z, _time: getTimeInTZ(z.tz) })));
 
   let html = sorted.map(z => {
-    const idx = zones.findIndex(orig => orig.tz === z.tz);
     const t = z._time || getTimeInTZ(z.tz);
     const timeStr = `${String(t.h24).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`;
     const day = isDaytime(z.tz);
     const dayClass = day ? 'zone-day' : 'zone-night';
-    return `<span class="zone-item ${dayClass}" role="listitem" data-tz="${z.tz}" style="--zone-color:${z.color}">
+    return `<span class="zone-item ${dayClass}" role="listitem" data-tz="${z.tz}" data-zone-id="${z.id}" style="--zone-color:${z.color}">
       <span class="zone-swatch" style="background:${z.color}" aria-hidden="true"></span>
       <span>${z.label}</span>
       <span class="zone-time">${timeStr}</span>
-      <button class="zone-remove" onclick="removeZone(${idx})" aria-label="Remove ${z.label}">&times;</button>
+      <button class="zone-remove" onclick="removeZone(${z.id})" aria-label="Remove ${z.label}">&times;</button>
     </span>`;
   }).join('');
 
   if (zones.length < MAX_ZONES) {
-    const usedTzs = new Set(zones.map(z => z.tz));
+    const usedCities = new Set(zones.map((zone) => getCityKey(zone)));
     const opts = CITY_CATALOG
-      .filter(c => !usedTzs.has(c.tz))
-      .map(c => `<option value="${c.tz}">${c.label}</option>`)
+      .map((c, index) => ({ city: c, index }))
+      .filter(({ city }) => !usedCities.has(getCityKey(city)))
+      .map(({ city, index }) => `<option value="${index}">${city.label}</option>`)
       .join('');
     html += `<button id="addLocalZone" class="zone-action" type="button" aria-label="Add your local time zone">Local</button>
     <select id="addTzSelect" class="zone-action" aria-label="Add a time zone">
@@ -575,7 +691,7 @@ function renderZoneBar() {
   const localButton = document.getElementById('addLocalZone');
   if (localButton) localButton.addEventListener('click', addLocalZone);
   const sel = document.getElementById('addTzSelect');
-  if (sel) sel.addEventListener('change', () => { if (sel.value) addZone(sel.value); });
+  if (sel) sel.addEventListener('change', () => { if (sel.value !== '') addZone(CITY_CATALOG[Number(sel.value)]); });
 }
 
 /** Lightweight per-frame update — only patches time text in existing chips. */
@@ -595,37 +711,36 @@ function updateZoneBarTimes() {
   }
 }
 
-function addZone(tz, options = {}) {
+function addZone(city, options = {}) {
   if (zones.length >= MAX_ZONES) return false;
-  if (zones.some((zone) => zone.tz === tz)) return false;
-  const city = CITY_CATALOG.find(c => c.tz === tz);
-  if (!city) return false;
+  if (!city || typeof city !== 'object') return false;
+  if (zones.some((zone) => getCityKey(zone) === getCityKey(city))) return false;
   const usedColors = new Set(zones.map(z => z.color));
   const color = HAND_COLORS.find(c => !usedColors.has(c)) || HAND_COLORS[zones.length % HAND_COLORS.length];
-  zones.push({ label: city.label, tz: city.tz, color });
+  zones.push(createZone(city.label, city.tz, color));
   renderZoneBar();
   if (options.persist !== false) persistAppState();
   return true;
 }
 
-function removeZone(index) {
+function removeZone(zoneId) {
+  const index = zones.findIndex((zone) => zone.id === zoneId);
+  if (index < 0) return;
   zones.splice(index, 1);
   renderZoneBar();
   persistAppState();
 }
 window.removeZone = removeZone;
 
-renderZoneBar();
-
 // ── CLOCK FACE RENDERING ────────────────────────────────────────────
 
 /** Draw day/night shaded face (24h mode). Bottom half = day, top = night. */
 function drawDayNightFace(cx, cy, r) {
-  const light = isLightMode();
-  const dayColor   = light ? '#f5e6c8' : '#2e3a1e';
-  const dayCenter  = light ? '#fdf0d5' : '#3d4a28';
-  const nightColor = light ? '#d0cfc8' : '#0d1321';
-  const midColor   = light ? '#e8d8b8' : '#1a2418';
+  const theme = getThemePalette();
+  const dayColor = theme.faceDay;
+  const dayCenter = theme.faceDayCenter;
+  const nightColor = theme.faceNight;
+  const midColor = theme.faceMid;
 
   // Night base
   ctx.beginPath();
@@ -655,7 +770,7 @@ function drawDayNightFace(cx, cy, r) {
   ctx.clip();
   const horizGrad = ctx.createLinearGradient(cx, cy - 16, cx, cy + 16);
   horizGrad.addColorStop(0, nightColor);
-  horizGrad.addColorStop(0.5, light ? '#ddd0b0' : '#151d18');
+  horizGrad.addColorStop(0.5, theme.faceHorizon);
   horizGrad.addColorStop(1, midColor);
   ctx.fillStyle = horizGrad;
   ctx.fillRect(cx - r, cy - 16, r * 2, 32);
@@ -664,10 +779,10 @@ function drawDayNightFace(cx, cy, r) {
 
 /** Draw plain solid-color face (12h mode). */
 function drawPlainFace(cx, cy, r) {
-  const light = isLightMode();
+  const theme = getThemePalette();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = light ? '#ebe8e0' : '#16213e';
+  ctx.fillStyle = theme.faceSolid;
   ctx.fill();
 }
 
@@ -677,7 +792,7 @@ function drawPlainFace(cx, cy, r) {
  */
 function drawFace(cx, cy, r) {
   const use24 = is24h();
-  const light = isLightMode();
+  const theme = getThemePalette();
 
   // Background: day/night for 24h, plain for 12h
   if (use24) {
@@ -689,7 +804,7 @@ function drawFace(cx, cy, r) {
   // Outer ring
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = light ? '#b0b0b8' : '#0f3460';
+  ctx.strokeStyle = theme.ring;
   ctx.lineWidth = 3;
   ctx.stroke();
 
@@ -703,9 +818,7 @@ function drawFace(cx, cy, r) {
       ctx.beginPath();
       ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
       ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
-      ctx.strokeStyle = isHour
-        ? (light ? '#333' : '#eee')
-        : (light ? '#999' : '#555');
+      ctx.strokeStyle = isHour ? theme.tickMajor : theme.tickMinor;
       ctx.lineWidth = isHour ? 2.5 : 1;
       ctx.stroke();
     }
@@ -717,7 +830,7 @@ function drawFace(cx, cy, r) {
     const numeralStyle = get24hNumeralStyle(r, isSmall, isXSmall);
     const fontSize = numeralStyle.fontSize;
     const numR = numeralStyle.numeralRadius;
-    ctx.fillStyle = light ? '#222' : '#ddd';
+    ctx.fillStyle = theme.numeral;
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -731,7 +844,7 @@ function drawFace(cx, cy, r) {
     const numeralStyle = get12hNumeralStyle(r, isSmall, isXSmall);
     const fontSize = numeralStyle.fontSize;
     const numR = numeralStyle.numeralRadius;
-    ctx.fillStyle = light ? '#222' : '#ddd';
+    ctx.fillStyle = theme.numeral;
     ctx.font = `bold ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -745,14 +858,16 @@ function drawFace(cx, cy, r) {
   // Center dot
   ctx.beginPath();
   ctx.arc(cx, cy, isSmall ? 3 : 5, 0, Math.PI * 2);
-  ctx.fillStyle = light ? '#333' : '#eee';
+  ctx.fillStyle = theme.centerDot;
   ctx.fill();
 }
 
 /**
  * Draw a single timezone hour hand with optional bezel label.
  */
-function drawHand(cx, cy, r, angle, length, width, color, label, tz, showBezelLabel) {
+function drawHand(cx, cy, r, angle, length, width, group, showBezelLabel) {
+  const theme = getThemePalette();
+  const color = group.color;
   const tipX = cx + Math.cos(angle) * length;
   const tipY = cy + Math.sin(angle) * length;
 
@@ -770,52 +885,55 @@ function drawHand(cx, cy, r, angle, length, width, color, label, tz, showBezelLa
   ctx.stroke();
   ctx.restore();
 
-  // Bezel label: one shared chip component (TZ or City text) with TZ-local day/night styling.
-  if (label && showBezelLabel) {
-    const light = isLightMode();
-    const day = isDaytime(tz);
+  // Bezel label: stack up to two chips when multiple zones resolve to the same hand position.
+  if (showBezelLabel && group.labels.length > 0) {
     const showCityInBezel = document.getElementById('showOuterCity').checked;
-    const tzAbbrev = getTzAbbrev(tz);
-    const bezelText = showCityInBezel ? label : tzAbbrev;
     const bezelLayout = getBezelLabelLayout(r, length, isSmall, isXSmall);
     const fs = bezelLayout.fontSize;
     const bezelR = bezelLayout.bezelRadius;
-    const bx = cx + Math.cos(angle) * bezelR;
-    const by = cy + Math.sin(angle) * bezelR;
+    const baseX = cx + Math.cos(angle) * bezelR;
+    const baseY = cy + Math.sin(angle) * bezelR;
     const needsFlip = angle > 0 && angle < Math.PI;
+    const visibleLabels = group.labels.slice(0, 2);
+    const offsets = getBezelLabelOffsets(visibleLabels.length, fs + 10);
 
-    const bezelBg = day
-      ? (light ? 'rgba(255,246,216,0.96)' : 'rgba(247,229,180,0.94)')
-      : (light ? 'rgba(28,41,74,0.95)' : 'rgba(12,24,46,0.94)');
-    const bezelTextColor = day ? '#1f1700' : '#f3f7ff';
+    visibleLabels.forEach((item, index) => {
+      const day = isDaytime(item.tz);
+      const bezelText = showCityInBezel ? item.label : getTzAbbrev(item.tz);
+      const tangentOffset = offsets[index] || 0;
+      const bx = baseX + (-Math.sin(angle) * tangentOffset);
+      const by = baseY + (Math.cos(angle) * tangentOffset);
+      const bezelBg = day ? theme.bezelDayBg : theme.bezelNightBg;
+      const bezelTextColor = day ? theme.bezelDayText : theme.bezelNightText;
 
-    ctx.save();
-    ctx.translate(bx, by);
-    if (needsFlip) {
-      ctx.rotate(angle + Math.PI / 2 + Math.PI);
-    } else {
-      ctx.rotate(angle + Math.PI / 2);
-    }
+      ctx.save();
+      ctx.translate(bx, by);
+      if (needsFlip) {
+        ctx.rotate(angle + Math.PI / 2 + Math.PI);
+      } else {
+        ctx.rotate(angle + Math.PI / 2);
+      }
 
-    ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+      ctx.font = `bold ${fs}px "Segoe UI", system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-    const tw = ctx.measureText(bezelText).width + 10;
-    const th = fs + 7;
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 3;
-    ctx.beginPath();
-    ctx.roundRect(-tw / 2, -th / 2, tw, th, 4);
-    ctx.fillStyle = bezelBg;
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = color;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = bezelTextColor;
-    ctx.fillText(bezelText, 0, 0);
-    ctx.restore();
+      const tw = ctx.measureText(bezelText).width + 10;
+      const th = fs + 7;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 3;
+      ctx.beginPath();
+      ctx.roundRect(-tw / 2, -th / 2, tw, th, 4);
+      ctx.fillStyle = bezelBg;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = item.color;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = bezelTextColor;
+      ctx.fillText(bezelText, 0, 0);
+      ctx.restore();
+    });
   }
 }
 /** Draw shared UTC minute + second hands (second hand hidden on small viewports). */
@@ -824,14 +942,14 @@ function drawMinuteSecondHands(cx, cy, r) {
   const m = now.getUTCMinutes();
   const s = now.getUTCSeconds();
   const ms = now.getUTCMilliseconds();
-  const light = isLightMode();
+  const theme = getThemePalette();
 
   // Minute hand — always visible
   const mAngle = ((m + s / 60) / 60) * Math.PI * 2 - Math.PI / 2;
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(cx + Math.cos(mAngle) * r * 0.7, cy + Math.sin(mAngle) * r * 0.7);
-  ctx.strokeStyle = light ? '#444' : '#bbb';
+  ctx.strokeStyle = theme.minuteHand;
   ctx.lineWidth = isSmall ? 2 : 3;
   ctx.lineCap = 'round';
   ctx.stroke();
@@ -844,7 +962,7 @@ function drawMinuteSecondHands(cx, cy, r) {
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + Math.cos(sAngle) * r * 0.75, cy + Math.sin(sAngle) * r * 0.75);
-    ctx.strokeStyle = light ? '#c0392b' : '#e94560';
+    ctx.strokeStyle = theme.secondHand;
     ctx.lineWidth = 1.2;
     ctx.lineCap = 'round';
     ctx.stroke();
@@ -852,20 +970,20 @@ function drawMinuteSecondHands(cx, cy, r) {
 
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-  ctx.fillStyle = light ? '#c0392b' : '#e94560';
+  ctx.fillStyle = theme.secondHand;
   ctx.fill();
 }
 
 // ── SCREEN READER ───────────────────────────────────────────────────
-function updateScreenReader(deduped) {
+function updateScreenReader(list) {
   const now = new Date();
   const minute = now.getUTCMinutes();
   if (minute === lastSrUpdate) return;
   lastSrUpdate = minute;
   const el = document.getElementById('sr-times');
-  const sorted = sortByTime(deduped);
+  const sorted = sortByTime(list.map((zone) => ({ ...zone, _time: getTimeInTZ(zone.tz) })));
   const lines = sorted.map(z => {
-    const t = getTimeInTZ(z.tz);
+    const t = z._time || getTimeInTZ(z.tz);
     return `${z.label}: ${t.h24}:${String(t.m).padStart(2,'0')}`;
   });
   el.textContent = 'Current times \u2014 ' + lines.join(', ');
@@ -895,12 +1013,12 @@ function draw() {
     const t = z._time || getTimeInTZ(z.tz);
     const hVal = getHourHandValue(t, use24);
     const hourAngle = (hVal / divisor) * Math.PI * 2 - Math.PI / 2;
-    drawHand(cx, cy, r, hourAngle, r * 0.468, handWidth, z.color, z.label, z.tz, showBezelLabels);
+    drawHand(cx, cy, r, hourAngle, r * 0.468, handWidth, z, showBezelLabels);
   }
 
   drawMinuteSecondHands(cx, cy, r);
   updateZoneBarTimes();
-  updateScreenReader(deduped);
+  updateScreenReader(zones);
   updateDebugOverlay(size, r, deduped.length, frameMs);
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -910,4 +1028,23 @@ function draw() {
   }
 }
 
-draw();
+async function initializeApp() {
+  await restorePersistedState();
+  resize();
+  document.getElementById('showBezelLabels').addEventListener('change', () => {
+    syncCityControlState();
+    persistAppState();
+  });
+  document.getElementById('showOuterCity').addEventListener('change', persistAppState);
+  document.getElementById('showSeconds').addEventListener('change', persistAppState);
+  document.getElementById('use24h').addEventListener('change', persistAppState);
+  document.getElementById('showDebug').addEventListener('change', syncDebugControlState);
+  document.getElementById('showDebugFrames').addEventListener('change', syncDebugControlState);
+  syncCityControlState();
+  syncDebugControlState();
+  setupDebugFrameTargets();
+  renderZoneBar();
+  draw();
+}
+
+initializeApp();

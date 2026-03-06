@@ -46,6 +46,12 @@
     };
   }
 
+  function getBezelLabelOffsets(count, spacing) {
+    if (count <= 1) return [0];
+    const gap = Number(spacing) || 0;
+    return [-gap / 2, gap / 2];
+  }
+
   function getHourHandValue(timeParts, use24h) {
     const hour = use24h ? timeParts.h24 : timeParts.h;
     const minute = Number(timeParts.m) || 0;
@@ -92,6 +98,7 @@
     get24hNumeralStyle,
     get12hNumeralStyle,
     getBezelLabelLayout,
+    getBezelLabelOffsets,
     getHourHandValue,
     getZoneGroupKey,
     findNearestCity

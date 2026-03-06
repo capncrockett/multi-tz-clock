@@ -5,6 +5,7 @@ const {
   get24hNumeralStyle,
   get12hNumeralStyle,
   getBezelLabelLayout,
+  getBezelLabelOffsets,
   getHourHandValue,
   getZoneGroupKey,
   findNearestCity
@@ -75,6 +76,11 @@ describe('clock-utils: sizing/layout helpers', () => {
     expect(medium.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
     expect(small.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
     expect(xsmall.bezelRadius).toBe(162);
+  });
+
+  test('bezel label offsets stack two labels around one hand position', () => {
+    expect(getBezelLabelOffsets(1, 18)).toEqual([0]);
+    expect(getBezelLabelOffsets(2, 18)).toEqual([-9, 9]);
   });
 });
 

@@ -6,7 +6,8 @@ This document is written for AI coding agents and engineers migrating this proje
 
 ```
 index.html           - App shell markup and DOM structure
-assets/css/main.css  - All styles (theme vars, layout, accessibility, responsive rules)
+assets/css/theme.css - Shared theme tokens for DOM + canvas rendering
+assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
@@ -26,7 +27,9 @@ README.md            - User-facing overview
 Contains:
 
 1. App metadata in `<head>`.
-2. External stylesheet reference: `assets/css/main.css`.
+2. External stylesheet references:
+- `assets/css/theme.css`
+- `assets/css/main.css`
 3. UI structure in `<body>`:
 - Skip link
 - `#controls` toolbar
@@ -41,10 +44,18 @@ Contains:
 ### `assets/css/main.css`
 Contains:
 
-1. Theme variables and light-mode overrides.
-2. Layout and typography for controls, canvas, and zone chips.
+1. Layout and typography for controls, canvas, and zone chips.
+2. Shared chip styles that consume theme tokens.
 3. Accessibility helpers (`.skip-link`, `.sr-only`, focus states).
 4. Responsive adjustments for narrow screens.
+
+### `assets/css/theme.css`
+Contains:
+
+1. High-level theme tokens for app surfaces, text, and accents.
+2. Shared day/night chip tokens used by both zone chips and bezel labels.
+3. Canvas-specific tokens for clock face, ticks, numerals, and hands.
+4. Light-mode overrides in one place for future multi-theme expansion.
 
 ### `assets/js/app.js`
 Contains these logical sections:
@@ -53,7 +64,7 @@ Contains these logical sections:
 - CONSTANTS: `HAND_COLORS[]`, `MAX_ZONES`
 - STATE: `zones[]`, canvas context, viewport flags
 - SIZING: `resize()`
-- PERSISTENCE: `restorePersistedState()`, `persistAppState()`
+- PERSISTENCE: `restorePersistedState()`, `persistAppState()` with IndexedDB fallback
 - HELPERS: `getTimeInTZ()`, `getTzAbbrev()`, local-zone resolution
 - NOAA SUNRISE/SUNSET: `getSunTimes()`, `isDaytime()`
 - DEDUPE/SORT: `dedupeZones()`, `sortByTime()`
@@ -81,6 +92,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - control toggles and debug dependencies
 - zone add/remove flow
 - local storage persistence across reloads
+- persistence across browser restart
 - geolocation-based local zone add flow
 - sub-hour timezone dedupe precision
 - compact sizing at small viewport
@@ -118,7 +130,8 @@ draw()
 - `isXSmall`: Extra-small rendering flag.
 - `viewportTier`: `medium | small | xsmall`.
 - `lastSrUpdate`: Minute-level throttle for live region announcements.
-- `localStorage`: Optional browser-only backing store for zones and persisted control toggles.
+- `localStorage`: Primary browser backing store for zones and persisted control toggles.
+- `IndexedDB`: Fallback browser backing store when `localStorage` is unavailable.
 - UI control state is read from DOM each frame.
 
 ## Compatibility Contracts
@@ -135,7 +148,7 @@ draw()
 
 ## Timezone Precision
 
-Timezone hand grouping now keys off the visible hour-hand position for the active face mode. That preserves distinct hands for sub-hour offsets such as `UTC+5:30` and keeps 24h-only collisions from merging into a 12h bucket.
+Timezone hand grouping now keys off the visible hour-hand position for the active face mode. That preserves distinct hands for sub-hour offsets such as `UTC+5:30`, keeps 24h-only collisions from merging into a 12h bucket, and stacks up to two bezel chips when two selected zones land on the same visible hand position.
 
 ## Migration Notes
 

@@ -65,6 +65,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 ## File Layout (Phase 1.1)
 
 - `index.html` - Markup and UI structure
+- `assets/css/theme.css` - Shared theme tokens for DOM + canvas rendering
 - `assets/css/main.css` - App styles and responsive/theming rules
 - `assets/js/clock-utils.js` - Shared pure logic for layout tiers, timezone grouping, and nearest-city lookup
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
@@ -82,8 +83,10 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - 24h face day/night shading via NOAA sunrise/sunset math
 - Add/remove zones from a 31-city catalog
 - Local storage persistence for zones and display toggles
+- IndexedDB fallback for persistence when `localStorage` is unavailable
 - `Local` zone action using geolocation with browser-timezone fallback
 - Minute-accurate hand grouping for +30 / +45 offset zones
+- Stacked bezel chips when two zones share one visible hand position
 - Responsive compact mode for small viewports
 - Accessible controls, skip link, and live region updates
 - Light/dark theme support via `prefers-color-scheme`
