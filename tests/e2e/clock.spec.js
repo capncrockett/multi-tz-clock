@@ -318,7 +318,27 @@ test('desktop hide ui mode leaves only the clock face visible', async ({ page })
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('clock-only');
 
   const afterWidth = await page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
-  expect(afterWidth).toBeGreaterThan(beforeWidth);
+  expect(afterWidth).toBe(beforeWidth);
+});
+
+test('desktop xsmall mode fits the full ui without scrolling', async ({ page }) => {
+  await mockDesktopShell(page, { initialPreset: 'xsmall', initialUiVisible: true });
+  await page.setViewportSize({ width: 232, height: 580 });
+  await gotoApp(page);
+
+  await page.locator('#addTzSelect').selectOption({ label: 'Karachi' });
+
+  const metrics = await page.evaluate(() => ({
+    scrollHeight: document.documentElement.scrollHeight,
+    clientHeight: document.documentElement.clientHeight,
+    bodyScrollHeight: document.body.scrollHeight,
+    bodyClientHeight: document.body.clientHeight,
+    canvasWidth: parseFloat(document.getElementById('clock').style.width || '0')
+  }));
+
+  expect(metrics.scrollHeight).toBe(metrics.clientHeight);
+  expect(metrics.bodyScrollHeight).toBeLessThanOrEqual(metrics.bodyClientHeight);
+  expect(metrics.canvasWidth).toBe(200);
 });
 
 test('accessibility hooks are present', async ({ page }) => {

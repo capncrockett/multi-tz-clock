@@ -67,6 +67,11 @@ const canvas = document.getElementById('clock');
 const ctx = canvas.getContext('2d');
 const SMALL_BREAKPOINT = 300;
 const XSMALL_BREAKPOINT = 220;
+const DESKTOP_CLOCK_SIZE_BY_PRESET = Object.freeze({
+  xsmall: 200,
+  small: 280,
+  medium: 340
+});
 const DEBUG_FRAME_TARGET_IDS = ['app-shell', 'controls', 'clock', 'zone-bar'];
 const ClockUtils = window.ClockUtils || {};
 const deriveViewportFlags = ClockUtils.deriveViewportFlags || ((size, smallBp, xsmallBp) => {
@@ -135,6 +140,7 @@ let lastSrUpdate = -1;
 let selectedDebugTargetId = '';
 let lastFrameTs = 0;
 let isDesktopUiVisible = true;
+let desktopWindowPresetId = 'medium';
 
 function isLightMode() {
   return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -415,7 +421,10 @@ async function initializeDesktopWindowControls() {
 
   const syncValue = (presetId) => {
     if (!presetId) return;
+    desktopWindowPresetId = presetId;
     sizeSelect.value = presetId;
+    document.documentElement.dataset.desktopSize = presetId;
+    resize();
   };
 
   if (typeof desktopShell.getWindowSizePreset === 'function') {
@@ -519,8 +528,10 @@ function updateDebugOverlay(size, r, dedupedCount, frameMs) {
 // ── SIZING ──────────────────────────────────────────────────────────
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const verticalChrome = isDesktopUiHidden() ? 32 : 220;
-  const rawSize = Math.min(window.innerWidth - 32, window.innerHeight - verticalChrome, 600);
+  const desktopPresetSize = getDesktopShell()?.isDesktop
+    ? DESKTOP_CLOCK_SIZE_BY_PRESET[desktopWindowPresetId] || DESKTOP_CLOCK_SIZE_BY_PRESET.medium
+    : null;
+  const rawSize = desktopPresetSize || Math.min(window.innerWidth - 32, window.innerHeight - 220, 600);
   const size = Math.max(rawSize, 120);
   const flags = deriveViewportFlags(size, SMALL_BREAKPOINT, XSMALL_BREAKPOINT);
   isXSmall = flags.isXSmall;

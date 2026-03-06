@@ -49,13 +49,13 @@ describe("desktop/window-config", () => {
   test("exposes the three desktop size presets and falls back to medium", () => {
     expect(WINDOW_SIZE_PRESETS.map((preset) => preset.id)).toEqual(["xsmall", "small", "medium"]);
     expect(DEFAULT_WINDOW_PRESET_ID).toBe("medium");
-    expect(getWindowSizePreset("small")).toMatchObject({ id: "small", width: 312, height: 500 });
+    expect(getWindowSizePreset("small")).toMatchObject({ id: "small", width: 312, height: 660 });
     expect(getWindowSizePreset("unknown")).toMatchObject({ id: "medium", width: 420, height: 560 });
   });
 
   test("snaps arbitrary window sizes to the nearest preset", () => {
     expect(getClosestWindowSizePreset(210, 420).id).toBe("xsmall");
-    expect(getClosestWindowSizePreset(320, 490).id).toBe("small");
+    expect(getClosestWindowSizePreset(320, 620).id).toBe("small");
     expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
   });
 

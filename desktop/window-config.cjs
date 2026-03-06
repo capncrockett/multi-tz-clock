@@ -1,8 +1,8 @@
 const path = require("node:path");
 
 const WINDOW_SIZE_PRESETS = Object.freeze([
-  Object.freeze({ id: "xsmall", label: "X-Small", width: 232, height: 430 }),
-  Object.freeze({ id: "small", label: "Small", width: 312, height: 500 }),
+  Object.freeze({ id: "xsmall", label: "X-Small", width: 232, height: 580 }),
+  Object.freeze({ id: "small", label: "Small", width: 312, height: 660 }),
   Object.freeze({ id: "medium", label: "Medium", width: 420, height: 560 })
 ]);
 const DEFAULT_WINDOW_PRESET_ID = "medium";
