@@ -133,7 +133,7 @@ async function loadDesktopMain(options = {}) {
     getDisplayMatching: jest.fn(() => ({ workArea }))
   };
   const nativeImage = {
-    createFromDataURL: jest.fn(() => ({ mocked: true }))
+    createFromPath: jest.fn(() => ({ mocked: true }))
   };
 
   jest.doMock("electron", () => ({
@@ -171,6 +171,7 @@ async function loadDesktopMain(options = {}) {
     screen,
     readDesktopPreferences,
     writeDesktopPreferences,
+    nativeImage,
     getWindow() {
       return lastWindow;
     },
@@ -193,6 +194,9 @@ describe("desktop/main", () => {
     expect(desktopMain.app.whenReady).toHaveBeenCalledTimes(1);
     expect(desktopMain.BrowserWindow).toHaveBeenCalledTimes(1);
     expect(win.loadFile).toHaveBeenCalledWith(expect.stringMatching(/index\.html$/));
+    expect(desktopMain.nativeImage.createFromPath).toHaveBeenCalledWith(
+      expect.stringMatching(/assets[\\/]icons[\\/]tray-icon\.png$/)
+    );
     expect(tray.setIgnoreDoubleClickEvents).toHaveBeenCalledWith(true);
     expect(desktopMain.readDesktopPreferences).toHaveBeenCalledWith({
       preferencesPath: "C:\\Users\\capnc\\AppData\\Roaming\\multi-tz-clock\\desktop-preferences.json"

@@ -27,6 +27,7 @@ const {
 
 const repoRoot = path.resolve(__dirname, "..");
 const preloadPath = path.join(__dirname, "preload.cjs");
+const trayIconPath = path.join(repoRoot, "assets", "icons", "tray-icon.png");
 
 let mainWindow = null;
 let tray = null;
@@ -40,16 +41,7 @@ let isLaunchOnStartup = DEFAULT_DESKTOP_PREFERENCES.launchOnStartup;
 let desktopPreferencesPath = null;
 
 function createTrayIcon() {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-      <circle cx="32" cy="32" r="29" fill="#0f3460" />
-      <circle cx="32" cy="32" r="26" fill="#16213e" stroke="#eef0f8" stroke-width="2" />
-      <path d="M32 18v16l11 7" fill="none" stroke="#e94560" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx="32" cy="32" r="3" fill="#eef0f8" />
-    </svg>
-  `.trim();
-
-  return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`);
+  return nativeImage.createFromPath(trayIconPath);
 }
 
 function getMainWindow() {
