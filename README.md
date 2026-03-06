@@ -51,6 +51,17 @@ Useful variants:
 - `npm run test:e2e:ui` - open Playwright UI mode
 - `npm run test:e2e:report` - open the latest HTML report
 
+## Agent Workflow
+
+This repo now includes strict agent guard rails in `AGENTS.md` plus local git hooks in `.githooks/`.
+
+- Hooks are installed automatically on `npm install` via `prepare`
+- Reinstall hooks manually with `npm run hooks:install`
+- Commits are blocked if there are leftover unstaged or untracked files
+- Non-doc commits run the full test suite before commit
+- Pushes are blocked unless the working tree is clean and tests pass
+- Commit messages must use a conventional format such as `fix(clock): adjust hand spacing`
+
 ## File Layout (Phase 1.1)
 
 - `index.html` - Markup and UI structure

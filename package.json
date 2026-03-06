@@ -4,6 +4,7 @@
   "description": "A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.",
   "main": "index.js",
   "scripts": {
+    "prepare": "node scripts/install-hooks.cjs",
     "test": "npm run test:all",
     "test:all": "npm run test:node && npm run test:e2e",
     "test:node": "jest --config jest.config.cjs --runInBand",
@@ -12,7 +13,11 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "guard:pre-commit": "node scripts/agent-guard.cjs pre-commit",
+    "guard:pre-push": "node scripts/agent-guard.cjs pre-push",
+    "guard:commit-msg": "node scripts/agent-guard.cjs commit-msg",
+    "hooks:install": "node scripts/install-hooks.cjs"
   },
   "repository": {
     "type": "git",
