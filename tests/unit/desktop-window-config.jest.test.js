@@ -4,6 +4,7 @@ const {
   DEFAULT_WINDOW_PRESET_ID,
   DEFAULT_WINDOW_BOUNDS,
   getWindowSizePreset,
+  getPresetContentBounds,
   getClosestWindowSizePreset,
   fitBoundsWithinArea,
   createMainWindowOptions,
@@ -50,14 +51,22 @@ describe("desktop/window-config", () => {
   test("exposes the three desktop size presets and falls back to medium", () => {
     expect(WINDOW_SIZE_PRESETS.map((preset) => preset.id)).toEqual(["xsmall", "small", "medium"]);
     expect(DEFAULT_WINDOW_PRESET_ID).toBe("medium");
-    expect(getWindowSizePreset("small")).toMatchObject({ id: "small", width: 312, height: 660 });
-    expect(getWindowSizePreset("unknown")).toMatchObject({ id: "medium", width: 420, height: 560 });
+    expect(getWindowSizePreset("small")).toMatchObject({ id: "small", width: 312, fullHeight: 660, clockOnlyHeight: 312 });
+    expect(getWindowSizePreset("unknown")).toMatchObject({ id: "medium", width: 420, fullHeight: 560, clockOnlyHeight: 372 });
+  });
+
+  test("returns different fixed bounds for full ui and clock-only modes", () => {
+    expect(getPresetContentBounds("xsmall", true)).toEqual({ width: 232, height: 580 });
+    expect(getPresetContentBounds("xsmall", false)).toEqual({ width: 232, height: 232 });
+    expect(getPresetContentBounds("medium", true)).toEqual({ width: 420, height: 560 });
+    expect(getPresetContentBounds("medium", false)).toEqual({ width: 420, height: 372 });
   });
 
   test("snaps arbitrary window sizes to the nearest preset", () => {
-    expect(getClosestWindowSizePreset(210, 420).id).toBe("xsmall");
-    expect(getClosestWindowSizePreset(320, 620).id).toBe("small");
-    expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
+    expect(getClosestWindowSizePreset(210, 420, true).id).toBe("xsmall");
+    expect(getClosestWindowSizePreset(320, 620, true).id).toBe("small");
+    expect(getClosestWindowSizePreset(400, 545, true).id).toBe("medium");
+    expect(getClosestWindowSizePreset(420, 360, false).id).toBe("medium");
   });
 
   test("fits bounds within a visible work area when the ui must be shown", () => {

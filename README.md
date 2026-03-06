@@ -88,7 +88,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Electron host around the existing browser app
 - Frameless transparent window with a desktop-only drag bar
 - Always-on-top behavior enabled by default
-- Three preset window sizes (`xsmall`, `small`, `medium`) with a fixed clock size per preset and no desktop scrolling
+- Three preset window sizes (`xsmall`, `small`, `medium`) with fixed full-UI and clock-only bounds per preset and no desktop scrolling
 - System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, and quit
 
 Still pending for Phase 2:

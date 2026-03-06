@@ -14,6 +14,7 @@ const {
   getClockHtmlPath,
   createTrayMenuEntries,
   getWindowSizePreset,
+  getPresetContentBounds,
   DEFAULT_WINDOW_PRESET_ID,
   fitBoundsWithinArea
 } = require("./window-config.cjs");
@@ -112,6 +113,9 @@ function setDesktopUiVisible(nextVisible) {
   isDesktopUiVisible = !!nextVisible;
 
   const win = getMainWindow();
+  if (win && !win.isDestroyed()) {
+    applyCurrentWindowBounds();
+  }
   if (isDesktopUiVisible) {
     keepWindowWithinVisibleWorkArea();
   }
@@ -178,6 +182,16 @@ function refreshTrayMenu() {
   tray.setToolTip("Multi-TZ Clock");
 }
 
+function applyCurrentWindowBounds() {
+  const win = getMainWindow();
+  if (!win) {
+    return;
+  }
+
+  const bounds = getPresetContentBounds(currentWindowPresetId, isDesktopUiVisible);
+  win.setContentSize(bounds.width, bounds.height);
+}
+
 function applyWindowPreset(presetId) {
   const preset = getWindowSizePreset(presetId);
   currentWindowPresetId = preset.id;
@@ -188,7 +202,7 @@ function applyWindowPreset(presetId) {
   }
 
   isApplyingWindowPreset = true;
-  win.setContentSize(preset.width, preset.height);
+  applyCurrentWindowBounds();
   if (isDesktopUiVisible) {
     keepWindowWithinVisibleWorkArea();
   }
@@ -207,9 +221,9 @@ function snapWindowToNearestPreset() {
   }
 
   const [contentWidth, contentHeight] = win.getContentSize();
-  const nearestPreset = getClosestWindowSizePreset(contentWidth, contentHeight);
-  const currentPreset = getWindowSizePreset(nearestPreset.id);
-  const alreadyAtPresetSize = contentWidth === currentPreset.width && contentHeight === currentPreset.height;
+  const nearestPreset = getClosestWindowSizePreset(contentWidth, contentHeight, isDesktopUiVisible);
+  const currentPresetBounds = getPresetContentBounds(nearestPreset.id, isDesktopUiVisible);
+  const alreadyAtPresetSize = contentWidth === currentPresetBounds.width && contentHeight === currentPresetBounds.height;
   if (nearestPreset.id !== currentWindowPresetId || !alreadyAtPresetSize) {
     applyWindowPreset(nearestPreset.id);
   }

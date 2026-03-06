@@ -1,9 +1,9 @@
 const path = require("node:path");
 
 const WINDOW_SIZE_PRESETS = Object.freeze([
-  Object.freeze({ id: "xsmall", label: "X-Small", width: 232, height: 580 }),
-  Object.freeze({ id: "small", label: "Small", width: 312, height: 660 }),
-  Object.freeze({ id: "medium", label: "Medium", width: 420, height: 560 })
+  Object.freeze({ id: "xsmall", label: "X-Small", width: 232, fullHeight: 580, clockOnlyHeight: 232 }),
+  Object.freeze({ id: "small", label: "Small", width: 312, fullHeight: 660, clockOnlyHeight: 312 }),
+  Object.freeze({ id: "medium", label: "Medium", width: 420, fullHeight: 560, clockOnlyHeight: 372 })
 ]);
 const DEFAULT_WINDOW_PRESET_ID = "medium";
 const DEFAULT_WINDOW_PRESET = WINDOW_SIZE_PRESETS.find((preset) => preset.id === DEFAULT_WINDOW_PRESET_ID);
@@ -11,24 +11,34 @@ const MIN_WINDOW_PRESET = WINDOW_SIZE_PRESETS[0];
 const MAX_WINDOW_PRESET = WINDOW_SIZE_PRESETS[WINDOW_SIZE_PRESETS.length - 1];
 const DEFAULT_WINDOW_BOUNDS = Object.freeze({
   width: DEFAULT_WINDOW_PRESET.width,
-  height: DEFAULT_WINDOW_PRESET.height,
+  height: DEFAULT_WINDOW_PRESET.fullHeight,
   minWidth: MIN_WINDOW_PRESET.width,
-  minHeight: MIN_WINDOW_PRESET.height,
+  minHeight: MIN_WINDOW_PRESET.clockOnlyHeight,
   maxWidth: MAX_WINDOW_PRESET.width,
-  maxHeight: MAX_WINDOW_PRESET.height
+  maxHeight: MAX_WINDOW_PRESET.fullHeight
 });
 
 function getWindowSizePreset(presetId) {
   return WINDOW_SIZE_PRESETS.find((preset) => preset.id === presetId) || DEFAULT_WINDOW_PRESET;
 }
 
-function getClosestWindowSizePreset(width, height) {
+function getPresetContentBounds(presetId, isUiVisible) {
+  const preset = getWindowSizePreset(presetId);
+  return {
+    width: preset.width,
+    height: isUiVisible ? preset.fullHeight : preset.clockOnlyHeight
+  };
+}
+
+function getClosestWindowSizePreset(width, height, isUiVisible = true) {
   const safeWidth = Number(width) || DEFAULT_WINDOW_PRESET.width;
-  const safeHeight = Number(height) || DEFAULT_WINDOW_PRESET.height;
+  const safeHeight = Number(height) || getPresetContentBounds(DEFAULT_WINDOW_PRESET_ID, isUiVisible).height;
 
   return WINDOW_SIZE_PRESETS.reduce((bestPreset, preset) => {
-    const bestDelta = Math.hypot(bestPreset.width - safeWidth, bestPreset.height - safeHeight);
-    const nextDelta = Math.hypot(preset.width - safeWidth, preset.height - safeHeight);
+    const bestBounds = getPresetContentBounds(bestPreset.id, isUiVisible);
+    const nextBounds = getPresetContentBounds(preset.id, isUiVisible);
+    const bestDelta = Math.hypot(bestBounds.width - safeWidth, bestBounds.height - safeHeight);
+    const nextDelta = Math.hypot(nextBounds.width - safeWidth, nextBounds.height - safeHeight);
     return nextDelta < bestDelta ? preset : bestPreset;
   }, DEFAULT_WINDOW_PRESET);
 }
@@ -115,6 +125,7 @@ module.exports = {
   DEFAULT_WINDOW_PRESET_ID,
   DEFAULT_WINDOW_BOUNDS,
   getWindowSizePreset,
+  getPresetContentBounds,
   getClosestWindowSizePreset,
   fitBoundsWithinArea,
   createMainWindowOptions,
