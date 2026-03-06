@@ -1,4 +1,4 @@
-# Architecture - Multi-TZ Clock (Phase 1.1)
+# Architecture - Multi-TZ Clock (Phase 2 kickoff)
 
 This document is written for AI coding agents and engineers migrating this project across platforms.
 
@@ -10,6 +10,9 @@ assets/css/theme.css - Shared theme tokens for DOM + canvas rendering
 assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
+desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests + main process
+desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
+desktop/preload.cjs  - Desktop-only bridge that tags the renderer for host-specific UI
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
 tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
 tests/e2e/*.spec.js  - Playwright browser smoke tests
@@ -32,6 +35,7 @@ Contains:
 - `assets/css/main.css`
 3. UI structure in `<body>`:
 - Skip link
+- `#desktop-drag-bar` desktop-only drag handle (hidden in browser mode)
 - `#controls` toolbar
 - `<canvas id="clock">`
 - `#sr-times` live region
@@ -46,8 +50,9 @@ Contains:
 
 1. Layout and typography for controls, canvas, and zone chips.
 2. Shared chip styles that consume theme tokens.
-3. Accessibility helpers (`.skip-link`, `.sr-only`, focus states).
-4. Responsive adjustments for narrow screens.
+3. Desktop-shell overrides for frameless drag behavior and transparent window padding.
+4. Accessibility helpers (`.skip-link`, `.sr-only`, focus states).
+5. Responsive adjustments for narrow screens.
 
 ### `assets/css/theme.css`
 Contains:
@@ -72,6 +77,24 @@ Contains these logical sections:
 - DRAWING: `drawDayNightFace()`, `drawPlainFace()`, `drawFace()`, `drawHand()`, `drawMinuteSecondHands()`
 - ACCESSIBILITY: `updateScreenReader()`
 - MAIN LOOP: `draw()`
+
+### `desktop/window-config.cjs`
+Contains pure helpers for Electron host setup:
+
+- `createMainWindowOptions()`
+- `getClockHtmlPath()`
+- `createTrayMenuEntries()`
+
+### `desktop/main.cjs`
+Contains Electron-specific host logic:
+
+- window creation and hide-to-tray lifecycle
+- tray icon and context menu
+- always-on-top toggle wiring
+- desktop app activation and quit flow
+
+### `desktop/preload.cjs`
+Contains a minimal `window.desktopShell` bridge and marks the document with `data-shell="desktop"` so the existing frontend can expose desktop-only drag affordances without changing browser behavior.
 
 ### `assets/js/clock-utils.js`
 Contains pure functions used by both browser runtime and Jest tests:
@@ -165,3 +188,4 @@ What is platform-specific:
 - Theming system hooks
 - Settings persistence
 - Tray/widget integration
+- Frameless drag regions and window lifecycle

@@ -21,7 +21,7 @@ Unlike typical world clock apps that show multiple separate dials, this project 
   - local storage persistence is shipped
   - geolocation-based local timezone detection is shipped
   - sub-hour timezone precision edge-case handling is shipped
-- Phase 2 desktop packaging has not started yet.
+- Phase 2 desktop packaging is now in progress with an Electron proof of concept.
 - Phase 3 through Phase 5 have not started yet.
 
 ---
@@ -70,7 +70,7 @@ Non-goals:
 
 ---
 
-## Phase 2 - POC Desktop App
+## Phase 2 - POC Desktop App In Progress
 
 Goal: Wrap the browser app into a desktop widget-style window.
 
@@ -81,6 +81,20 @@ Option A - Electron:
 - Draggable/resizable behavior
 - System tray integration
 - Auto-launch on startup
+
+Shipped in this checkpoint:
+
+- Electron host bootstrapped around the existing browser UI
+- Frameless transparent always-on-top window
+- Desktop-only drag bar for moving the window
+- Resizable shell window
+- System tray menu with show/hide, pin toggle, and quit
+
+Still pending in Phase 2:
+
+- Auto-launch on startup
+- Packaging/distribution flow
+- Decision on whether to stay on Electron or pivot to Tauri before Phase 2 is considered complete
 
 Option B - Tauri:
 

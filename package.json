@@ -2,8 +2,9 @@
   "name": "multi-tz-clock",
   "version": "1.0.0",
   "description": "A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.",
-  "main": "index.js",
+  "main": "desktop/main.cjs",
   "scripts": {
+    "desktop:start": "node scripts/start-electron.cjs",
     "prepare": "node scripts/install-hooks.cjs",
     "test": "npm run test:all",
     "test:all": "npm run test:node && npm run test:e2e",
@@ -32,6 +33,7 @@
   "homepage": "https://github.com/capncrockett/multi-tz-clock#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "electron": "^40.8.0",
     "jest": "^30.2.0"
   },
   "private": true

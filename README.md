@@ -6,6 +6,12 @@ A single analog clock face with multiple color-coded hour hands, one per time zo
 
 Open `index.html` in any modern browser. No build step, no dependencies.
 
+Launch the Electron desktop proof of concept:
+
+```bash
+npm run desktop:start
+```
+
 ## Automated Testing
 
 Install dependencies and browser once:
@@ -62,17 +68,33 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Pushes are blocked unless the working tree is clean and tests pass
 - Commit messages must use a conventional format such as `fix(clock): adjust hand spacing`
 
-## File Layout (Phase 1.1)
+## File Layout
 
 - `index.html` - Markup and UI structure
 - `assets/css/theme.css` - Shared theme tokens for DOM + canvas rendering
 - `assets/css/main.css` - App styles and responsive/theming rules
 - `assets/js/clock-utils.js` - Shared pure logic for layout tiers, timezone grouping, and nearest-city lookup
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
+- `desktop/window-config.cjs` - Pure Electron window and tray descriptors used by tests
+- `desktop/main.cjs` - Electron main-process host for the desktop POC
+- `desktop/preload.cjs` - Desktop-only renderer bridge and shell flag
 - `tests/unit/*.jest.test.js` - Jest unit tests
 - `tests/integration/*.integration.jest.test.js` - Jest integration tests
 - `ARCHITECTURE.md` - Technical deep dive for engineering handoff
 - `ROADMAP.md` - Multi-phase platform plan
+
+## Desktop POC (Phase 2 start)
+
+- Electron host around the existing browser app
+- Frameless transparent window with a desktop-only drag bar
+- Always-on-top behavior enabled by default
+- System tray menu for show/hide, pin toggle, and quit
+
+Still pending for Phase 2:
+
+- Auto-launch on startup
+- Packaging and distribution flow
+- Native shell preferences beyond tray controls
 
 ## Features (Phase 1 MVP)
 
