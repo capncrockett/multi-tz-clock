@@ -12,6 +12,18 @@ Launch the Electron desktop proof of concept:
 npm run desktop:start
 ```
 
+Create an unpacked desktop build under `dist/pack*`:
+
+```bash
+npm run desktop:pack
+```
+
+Build the Windows installer under `dist/dist*`:
+
+```bash
+npm run desktop:dist
+```
+
 ## Automated Testing
 
 Install dependencies and browser once:
@@ -92,10 +104,10 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Three preset window sizes (`xsmall`, `small`, `medium`) with fixed full-UI and clock-only bounds per preset and no desktop scrolling
 - System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, Windows launch-on-startup, and quit
 - Desktop-only host preferences persist to a local JSON file under Electron `userData`; browser zones/toggles still persist in `localStorage` with IndexedDB fallback
+- Windows packaging is wired through Electron Builder with `desktop:pack` for unpacked smoke builds and `desktop:dist` for the NSIS installer
 
 Still pending for Phase 2:
 
-- Packaging and distribution flow
 - Final Electron vs. Tauri host decision
 
 ## Features (Phase 1 MVP)

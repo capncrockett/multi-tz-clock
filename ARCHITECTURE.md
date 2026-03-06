@@ -14,6 +14,8 @@ desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests 
 desktop/preferences.cjs - Desktop host preference normalization + local JSON persistence
 desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
 desktop/preload.cjs  - Desktop-only bridge that tags the renderer for host-specific UI
+scripts/build-electron.cjs - Packaging wrapper that assigns a fresh `dist/` output folder per build
+build/icon.png       - Packaged desktop app icon used by Electron Builder
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
 tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
 tests/e2e/*.spec.js  - Playwright browser smoke tests
@@ -103,6 +105,12 @@ Contains Electron-specific host logic:
 - Windows login-startup wiring
 - desktop preference load/save under Electron `userData`
 - desktop app activation and quit flow
+
+### Packaging
+
+- `package.json` contains the Electron Builder config for Windows packaging.
+- `npm run desktop:pack` creates an unpacked app directory for local packaging smoke checks.
+- `npm run desktop:dist` builds the Windows NSIS installer into `dist/`.
 
 ### `desktop/preload.cjs`
 Contains a minimal `window.desktopShell` bridge and marks the document with `data-shell="desktop"` so the existing frontend can expose desktop-only drag affordances without changing browser behavior.

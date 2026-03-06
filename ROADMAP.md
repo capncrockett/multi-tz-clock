@@ -91,10 +91,10 @@ Shipped in this checkpoint:
 - System tray menu with UI toggle, pin toggle, launch-on-startup toggle, and quit
 - Desktop host preferences persisted locally under the Electron user-data directory
 - Windows login startup wiring for the desktop app
+- Windows packaging flow via Electron Builder with installer output scripts
 
 Still pending in Phase 2:
 
-- Packaging/distribution flow
 - Decision on whether to stay on Electron or pivot to Tauri before Phase 2 is considered complete
 
 Option B - Tauri:
