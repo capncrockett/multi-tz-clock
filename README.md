@@ -89,7 +89,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Frameless transparent window with a desktop-only drag bar
 - Always-on-top behavior enabled by default
 - Three preset window sizes (`xsmall`, `small`, `medium`) with an in-widget size selector and resize snapping
-- System tray click to show/hide, plus menu actions for show/hide, pin toggle, and quit
+- System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, and quit
 
 Still pending for Phase 2:
 

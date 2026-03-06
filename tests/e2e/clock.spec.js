@@ -31,6 +31,56 @@ async function freezeTime(page, isoString) {
   }, isoString);
 }
 
+async function mockDesktopShell(page, options = {}) {
+  const {
+    initialPreset = 'medium',
+    initialUiVisible = true
+  } = options;
+
+  await page.addInitScript(({ initialPreset, initialUiVisible }) => {
+    let preset = initialPreset;
+    let uiVisible = initialUiVisible;
+    const presetListeners = [];
+    const uiListeners = [];
+
+    globalThis.desktopShell = {
+      isDesktop: true,
+      platform: 'win32',
+      getWindowSizePreset: async () => preset,
+      setWindowSizePreset: async (nextPreset) => {
+        preset = nextPreset;
+        for (const listener of presetListeners) listener(preset);
+        return preset;
+      },
+      onWindowSizePresetChange(listener) {
+        presetListeners.push(listener);
+        return () => {};
+      },
+      getUiVisibility: async () => uiVisible,
+      setUiVisibility: async (nextVisible) => {
+        uiVisible = !!nextVisible;
+        for (const listener of uiListeners) listener(uiVisible);
+        return uiVisible;
+      },
+      onUiVisibilityChange(listener) {
+        uiListeners.push(listener);
+        return () => {};
+      }
+    };
+
+    globalThis.__desktopShellTest = {
+      emitUiVisibility(nextVisible) {
+        uiVisible = !!nextVisible;
+        for (const listener of uiListeners) listener(uiVisible);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.documentElement.dataset.shell = 'desktop';
+    });
+  }, { initialPreset, initialUiVisible });
+}
+
 test('loads and initializes without runtime errors', async ({ page }) => {
   const runtimeErrors = [];
   page.on('pageerror', (err) => runtimeErrors.push(err.message));
@@ -247,6 +297,28 @@ test('small and xsmall viewport tiers update dynamically', async ({ page }) => {
 
   await page.setViewportSize({ width: 200, height: 420 });
   await expect(debugMain).toContainText('tier: xsmall');
+});
+
+test('desktop hide ui mode leaves only the clock face visible', async ({ page }) => {
+  await mockDesktopShell(page, { initialUiVisible: true });
+  await page.setViewportSize({ width: 420, height: 560 });
+  await gotoApp(page);
+
+  await expect(page.locator('#desktopSizeLabel')).toBeVisible();
+  const beforeWidth = await page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
+
+  await page.evaluate(() => {
+    window.__desktopShellTest.emitUiVisibility(false);
+  });
+
+  await expect(page.locator('#clock')).toBeVisible();
+  await expect(page.locator('#controls')).toBeHidden();
+  await expect(page.locator('#zone-bar')).toBeHidden();
+  await expect(page.locator('#debug-controls')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('clock-only');
+
+  const afterWidth = await page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
+  expect(afterWidth).toBeGreaterThan(beforeWidth);
 });
 
 test('accessibility hooks are present', async ({ page }) => {

@@ -134,6 +134,7 @@ let viewportTier = 'medium';
 let lastSrUpdate = -1;
 let selectedDebugTargetId = '';
 let lastFrameTs = 0;
+let isDesktopUiVisible = true;
 
 function isLightMode() {
   return window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -143,6 +144,14 @@ function is24h() {
 }
 function getDesktopShell() {
   return window.desktopShell || null;
+}
+function isDesktopUiHidden() {
+  return !!getDesktopShell()?.isDesktop && !isDesktopUiVisible;
+}
+function syncDesktopUiVisibility(isVisible) {
+  isDesktopUiVisible = !!isVisible;
+  document.documentElement.dataset.desktopUi = isDesktopUiVisible ? 'full' : 'clock-only';
+  resize();
 }
 let cachedThemePalette = null;
 let cachedThemeKey = '';
@@ -429,6 +438,20 @@ async function initializeDesktopWindowControls() {
   if (typeof desktopShell.onWindowSizePresetChange === 'function') {
     desktopShell.onWindowSizePresetChange(syncValue);
   }
+
+  if (typeof desktopShell.getUiVisibility === 'function') {
+    try {
+      syncDesktopUiVisibility(await desktopShell.getUiVisibility());
+    } catch {
+      syncDesktopUiVisibility(true);
+    }
+  } else {
+    syncDesktopUiVisibility(true);
+  }
+
+  if (typeof desktopShell.onUiVisibilityChange === 'function') {
+    desktopShell.onUiVisibilityChange(syncDesktopUiVisibility);
+  }
 }
 
 function setupDebugFrameTargets() {
@@ -496,7 +519,8 @@ function updateDebugOverlay(size, r, dedupedCount, frameMs) {
 // ── SIZING ──────────────────────────────────────────────────────────
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const rawSize = Math.min(window.innerWidth - 32, window.innerHeight - 220, 600);
+  const verticalChrome = isDesktopUiHidden() ? 32 : 220;
+  const rawSize = Math.min(window.innerWidth - 32, window.innerHeight - verticalChrome, 600);
   const size = Math.max(rawSize, 120);
   const flags = deriveViewportFlags(size, SMALL_BREAKPOINT, XSMALL_BREAKPOINT);
   isXSmall = flags.isXSmall;

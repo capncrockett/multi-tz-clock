@@ -36,6 +36,10 @@
     width: 100%;
   }
 
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] body {
+    padding: 16px;
+  }
+
   html[data-shell='desktop'] .desktop-only-control {
     display: inline-flex !important;
   }
@@ -71,6 +75,19 @@
   html[data-shell='desktop'] button,
   html[data-shell='desktop'] canvas {
     -webkit-app-region: no-drag;
+  }
+
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] .skip-link,
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] #desktop-drag-bar,
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] #controls,
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] #zone-bar,
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] #debug-controls,
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] .debug-overlay {
+    display: none !important;
+  }
+
+  html[data-shell='desktop'][data-desktop-ui='clock-only'] #clock {
+    -webkit-app-region: drag;
   }
 
   .skip-link {

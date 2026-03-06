@@ -25,6 +25,7 @@ let isQuitting = false;
 let currentWindowPresetId = DEFAULT_WINDOW_PRESET_ID;
 let resizeSnapTimer = null;
 let isApplyingWindowPreset = false;
+let isDesktopUiVisible = true;
 
 function createTrayIcon() {
   const svg = `
@@ -87,6 +88,21 @@ function quitApplication() {
   app.quit();
 }
 
+function setDesktopUiVisible(nextVisible) {
+  isDesktopUiVisible = !!nextVisible;
+
+  const win = getMainWindow();
+  if (win && !win.isDestroyed()) {
+    win.webContents.send("desktop:ui-visibility-changed", isDesktopUiVisible);
+  }
+
+  refreshTrayMenu();
+}
+
+function toggleDesktopUiVisible() {
+  setDesktopUiVisible(!isDesktopUiVisible);
+}
+
 function buildTrayMenuItem(entry) {
   if (entry.type === "separator") {
     return { type: "separator" };
@@ -106,8 +122,8 @@ function buildTrayMenuItem(entry) {
   }
 
   switch (entry.id) {
-    case "toggle-visibility":
-      item.click = toggleWindowVisibility;
+    case "toggle-ui-visibility":
+      item.click = toggleDesktopUiVisible;
       break;
     case "toggle-always-on-top":
       item.click = toggleAlwaysOnTop;
@@ -129,7 +145,7 @@ function refreshTrayMenu() {
 
   const win = getMainWindow();
   const entries = createTrayMenuEntries({
-    isVisible: !!win?.isVisible(),
+    isUiVisible: isDesktopUiVisible,
     isAlwaysOnTop: !!win?.isAlwaysOnTop()
   });
 
@@ -234,6 +250,11 @@ ipcMain.handle("desktop:get-window-size-preset", () => currentWindowPresetId);
 ipcMain.handle("desktop:set-window-size-preset", (_event, presetId) => {
   applyWindowPreset(presetId);
   return currentWindowPresetId;
+});
+ipcMain.handle("desktop:get-ui-visibility", () => isDesktopUiVisible);
+ipcMain.handle("desktop:set-ui-visibility", (_event, isVisible) => {
+  setDesktopUiVisible(isVisible);
+  return isDesktopUiVisible;
 });
 
 app.whenReady().then(() => {

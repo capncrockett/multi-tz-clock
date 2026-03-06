@@ -65,11 +65,11 @@ function getClockHtmlPath(repoRoot) {
   return path.join(repoRoot, "index.html");
 }
 
-function createTrayMenuEntries({ isVisible, isAlwaysOnTop }) {
+function createTrayMenuEntries({ isUiVisible, isAlwaysOnTop }) {
   return [
     {
-      id: "toggle-visibility",
-      label: isVisible ? "Hide Window" : "Show Window"
+      id: "toggle-ui-visibility",
+      label: isUiVisible ? "Hide UI" : "Show UI"
     },
     {
       id: "toggle-always-on-top",

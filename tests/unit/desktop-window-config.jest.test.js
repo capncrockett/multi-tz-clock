@@ -59,17 +59,17 @@ describe("desktop/window-config", () => {
     expect(getClosestWindowSizePreset(400, 545).id).toBe("medium");
   });
 
-  test("builds tray menu descriptors for visible and pinned states", () => {
-    expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true })).toEqual([
-      { id: "toggle-visibility", label: "Hide Window" },
+  test("builds tray menu descriptors for ui visibility and pinned states", () => {
+    expect(createTrayMenuEntries({ isUiVisible: true, isAlwaysOnTop: true })).toEqual([
+      { id: "toggle-ui-visibility", label: "Hide UI" },
       { id: "toggle-always-on-top", label: "Always on Top", type: "checkbox", checked: true },
       { type: "separator" },
       { id: "quit", label: "Quit" }
     ]);
 
-    expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false })[0]).toEqual({
-      id: "toggle-visibility",
-      label: "Show Window"
+    expect(createTrayMenuEntries({ isUiVisible: false, isAlwaysOnTop: false })[0]).toEqual({
+      id: "toggle-ui-visibility",
+      label: "Show UI"
     });
   });
 });
