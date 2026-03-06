@@ -8,6 +8,24 @@ Unlike typical world clock apps that show multiple separate dials, this project 
 
 ---
 
+## Current Status
+
+- Phase 1 browser MVP is complete and shipped in this repo.
+- Phase 1.1 browser hardening is also complete:
+  - architecture documentation
+  - extracted pure layout helpers
+  - Jest unit/integration coverage
+  - Playwright browser smoke coverage
+  - repo guard hooks and workflow scripts
+- Deferred browser items are still deferred:
+  - local storage persistence
+  - geolocation-based local timezone detection
+  - sub-hour timezone precision edge-case handling
+- Phase 2 desktop packaging has not started yet.
+- Phase 3 through Phase 5 have not started yet.
+
+---
+
 ## Phase 1 - MVP (HTML/Canvas) Complete
 
 Goal: Working prototype, zero dependencies, runs in any browser.
@@ -33,6 +51,26 @@ Deferred from Phase 1:
 - Local storage persistence
 - Geolocation-based local timezone detection
 - Sub-hour timezone precision edge-case handling (for example +30 / +45 offsets)
+
+---
+
+## Phase 1.1 - Browser Hardening Complete
+
+Goal: Make the browser MVP easier to test, maintain, and port without changing the product direction.
+
+Shipped:
+
+- Architecture documentation for the browser codebase
+- Pure clock layout helpers extracted to `assets/js/clock-utils.js`
+- Jest unit tests for shared utility logic
+- Jest integration tests for composed layout rules
+- Playwright browser smoke tests
+- Guard scripts and git hooks for stricter agent workflow
+
+Non-goals:
+
+- No desktop shell or native host work yet
+- No change to the deferred sub-hour timezone precision behavior
 
 ---
 
