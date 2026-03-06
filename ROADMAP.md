@@ -92,6 +92,9 @@ Shipped in this checkpoint:
 - Desktop host preferences persisted locally under the Electron user-data directory
 - Windows login startup wiring for the desktop app
 - Windows packaging flow via Electron Builder with installer output scripts
+- Tauri v2 scaffold added in-repo under `src-tauri/`
+- Tauri dev/build scripts added without changing the browser app's source-of-truth role
+- Existing renderer contract extended so Tauri can load the same frontend as Electron/browser
 
 Selected target shell - Tauri:
 

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Multi-TZ Clock",
+  "version": "0.1.0",
+  "identifier": "com.capnc.multi_tz_clock",
+  "build": {
+    "beforeDevCommand": "node scripts/serve-static.cjs",
+    "devUrl": "http://127.0.0.1:4173",
+    "beforeBuildCommand": "node scripts/prepare-tauri-dist.cjs",
+    "frontendDist": "../.tauri-dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Multi-TZ Clock",
+        "width": 420,
+        "height": 560,
+        "minWidth": 232,
+        "minHeight": 232,
+        "maxWidth": 420,
+        "maxHeight": 660,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "resizable": true,
+        "maximizable": false,
+        "fullscreen": false,
+        "visible": true,
+        "center": true,
+        "shadow": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

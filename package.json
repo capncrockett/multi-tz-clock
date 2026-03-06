@@ -8,6 +8,9 @@
     "desktop:start": "node scripts/start-electron.cjs",
     "desktop:pack": "node scripts/build-electron.cjs pack",
     "desktop:dist": "node scripts/build-electron.cjs dist",
+    "desktop:tauri:dev": "tauri dev",
+    "desktop:tauri:build": "tauri build",
+    "tauri": "tauri",
     "prepare": "node scripts/install-hooks.cjs",
     "test": "npm run test:all",
     "test:all": "npm run test:node && npm run test:e2e",
@@ -66,6 +69,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@tauri-apps/cli": "^2.10.1",
     "electron": "^40.8.0",
     "electron-builder": "^26.8.1",
     "jest": "^30.2.0"

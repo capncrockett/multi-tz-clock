@@ -16,12 +16,16 @@ index.html           - App shell markup and DOM structure
 assets/css/theme.css - Shared theme tokens for DOM + canvas rendering
 assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
+assets/js/desktop-shell.js - Browser-safe desktop bridge that lets Electron and Tauri expose the same renderer contract
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
 desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests + main process
 desktop/preferences.cjs - Desktop host preference normalization + local JSON persistence
 desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
 desktop/preload.cjs  - Desktop-only bridge that tags the renderer for host-specific UI
 scripts/build-electron.cjs - Packaging wrapper that assigns a fresh `dist/` output folder per build
+scripts/serve-static.cjs - Static file server used by `tauri dev` against the existing browser app
+scripts/prepare-tauri-dist.cjs - Copies `index.html` + `assets/` into a minimal frontend folder for Tauri builds
+src-tauri/           - Tauri v2 host scaffold (config, capabilities, icons, Rust entrypoint)
 build/icon.png       - Packaged desktop app icon used by Electron Builder
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
 tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
@@ -120,11 +124,21 @@ This Electron host is now considered an interim fallback shell, not the final de
 - `package.json` contains the Electron Builder config for Windows packaging.
 - `npm run desktop:pack` creates an unpacked app directory for local packaging smoke checks.
 - `npm run desktop:dist` builds the Windows NSIS installer into `dist/`.
+- `npm run desktop:tauri:dev` starts a static Node server for the existing frontend and launches the Tauri host.
+- `npm run desktop:tauri:build` stages `index.html` + `assets/` into `.tauri-dist/` and builds the Tauri host.
 
 These packaging paths remain useful until a Tauri build path reaches feature parity.
 
 ### `desktop/preload.cjs`
 Contains a minimal `window.desktopShell` bridge and marks the document with `data-shell="desktop"` so the existing frontend can expose desktop-only drag affordances without changing browser behavior.
+
+### `assets/js/desktop-shell.js`
+Contains the desktop-shell bridge used outside Electron:
+
+- leaves browser behavior untouched when no desktop host is present
+- preserves Electron's existing `window.desktopShell` contract when the preload bridge already provided it
+- maps Tauri's global window APIs onto the same `getWindowSizePreset()`, `setWindowSizePreset()`, `getUiVisibility()`, and `setUiVisibility()` hooks used by `assets/js/app.js`
+- marks the document with `data-shell="desktop"` so the existing CSS and renderer logic stay source-of-truth
 
 ### `assets/js/clock-utils.js`
 Contains pure functions used by both browser runtime and Jest tests:
@@ -221,3 +235,9 @@ What is platform-specific:
 - Tray/widget integration
 - Frameless drag regions and window lifecycle
 - Desktop packaging and installer behavior
+
+Current Tauri spike boundary:
+
+- Browser HTML/CSS/JS remains canonical and is loaded directly by Tauri
+- Tauri currently handles only the thin window host boundary plus icon/config scaffolding
+- Electron-specific tray, startup, and preference persistence still remain the fallback implementation until parity work lands

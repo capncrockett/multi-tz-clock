@@ -12,6 +12,12 @@ Launch the Electron desktop proof of concept:
 npm run desktop:start
 ```
 
+Launch the Tauri desktop spike (requires a Rust toolchain plus the Tauri prerequisites for your OS):
+
+```bash
+npm run desktop:tauri:dev
+```
+
 Create an unpacked desktop build under `dist/pack*`:
 
 ```bash
@@ -22,6 +28,12 @@ Build the Windows installer under `dist/dist*`:
 
 ```bash
 npm run desktop:dist
+```
+
+Build the Tauri desktop host:
+
+```bash
+npm run desktop:tauri:build
 ```
 
 ## Automated Testing
@@ -86,10 +98,14 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - `assets/css/theme.css` - Shared theme tokens for DOM + canvas rendering
 - `assets/css/main.css` - App styles and responsive/theming rules
 - `assets/js/clock-utils.js` - Shared pure logic for layout tiers, timezone grouping, and nearest-city lookup
+- `assets/js/desktop-shell.js` - Browser-safe bridge that maps Tauri onto the existing desktop renderer contract
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
 - `desktop/window-config.cjs` - Pure Electron window and tray descriptors used by tests
 - `desktop/main.cjs` - Electron main-process host for the desktop POC
 - `desktop/preload.cjs` - Desktop-only renderer bridge and shell flag
+- `scripts/serve-static.cjs` - Static dev server for Tauri against the existing browser frontend
+- `scripts/prepare-tauri-dist.cjs` - Copies `index.html` + `assets/` into a minimal Tauri frontend bundle
+- `src-tauri/` - Tauri v2 desktop host scaffold
 - `tests/unit/*.jest.test.js` - Jest unit tests
 - `tests/integration/*.integration.jest.test.js` - Jest integration tests
 - `ARCHITECTURE.md` - Technical deep dive for engineering handoff
@@ -108,7 +124,8 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 
 Still pending for Phase 2:
 
-- Port the desktop shell to Tauri and keep Electron only as a fallback until parity is reached
+- Finish porting Electron shell behaviors to Tauri: tray, startup, preference persistence, and packaging parity
+- Keep Electron only as a fallback until Tauri reaches parity
 
 Platform direction:
 
