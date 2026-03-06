@@ -61,7 +61,7 @@ describe("desktop/window-config", () => {
 
   test("builds tray menu descriptors for visible and pinned states", () => {
     expect(createTrayMenuEntries({ isVisible: true, isAlwaysOnTop: true })).toEqual([
-      { id: "toggle-visibility", label: "Hide UI" },
+      { id: "toggle-visibility", label: "Hide Window" },
       { id: "toggle-always-on-top", label: "Always on Top", type: "checkbox", checked: true },
       { type: "separator" },
       { id: "quit", label: "Quit" }
@@ -69,7 +69,7 @@ describe("desktop/window-config", () => {
 
     expect(createTrayMenuEntries({ isVisible: false, isAlwaysOnTop: false })[0]).toEqual({
       id: "toggle-visibility",
-      label: "Show UI"
+      label: "Show Window"
     });
   });
 });

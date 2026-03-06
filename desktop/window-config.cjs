@@ -69,7 +69,7 @@ function createTrayMenuEntries({ isVisible, isAlwaysOnTop }) {
   return [
     {
       id: "toggle-visibility",
-      label: isVisible ? "Hide UI" : "Show UI"
+      label: isVisible ? "Hide Window" : "Show Window"
     },
     {
       id: "toggle-always-on-top",
