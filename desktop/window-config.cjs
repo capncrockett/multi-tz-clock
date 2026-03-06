@@ -9,6 +9,7 @@ const DEFAULT_WINDOW_PRESET_ID = "medium";
 const DEFAULT_WINDOW_PRESET = WINDOW_SIZE_PRESETS.find((preset) => preset.id === DEFAULT_WINDOW_PRESET_ID);
 const MIN_WINDOW_PRESET = WINDOW_SIZE_PRESETS[0];
 const MAX_WINDOW_PRESET = WINDOW_SIZE_PRESETS[WINDOW_SIZE_PRESETS.length - 1];
+const TOP_EDGE_PIN_THRESHOLD = 4;
 const DEFAULT_WINDOW_BOUNDS = Object.freeze({
   width: DEFAULT_WINDOW_PRESET.width,
   height: DEFAULT_WINDOW_PRESET.height,
@@ -31,6 +32,17 @@ function getClosestWindowSizePreset(width, height) {
     const nextDelta = Math.hypot(preset.width - safeWidth, preset.height - safeHeight);
     return nextDelta < bestDelta ? preset : bestPreset;
   }, DEFAULT_WINDOW_PRESET);
+}
+
+function pinWindowToTopEdge(bounds, threshold = TOP_EDGE_PIN_THRESHOLD) {
+  if (!bounds || !Number.isFinite(bounds.x) || !Number.isFinite(bounds.y)) {
+    return null;
+  }
+
+  return {
+    x: bounds.x,
+    y: bounds.y <= threshold ? 0 : bounds.y
+  };
 }
 
 function createMainWindowOptions({ preloadPath }) {
@@ -88,9 +100,11 @@ function createTrayMenuEntries({ isUiVisible, isAlwaysOnTop }) {
 module.exports = {
   WINDOW_SIZE_PRESETS,
   DEFAULT_WINDOW_PRESET_ID,
+  TOP_EDGE_PIN_THRESHOLD,
   DEFAULT_WINDOW_BOUNDS,
   getWindowSizePreset,
   getClosestWindowSizePreset,
+  pinWindowToTopEdge,
   createMainWindowOptions,
   getClockHtmlPath,
   createTrayMenuEntries

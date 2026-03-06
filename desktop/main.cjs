@@ -13,7 +13,8 @@ const {
   getClockHtmlPath,
   createTrayMenuEntries,
   getWindowSizePreset,
-  DEFAULT_WINDOW_PRESET_ID
+  DEFAULT_WINDOW_PRESET_ID,
+  pinWindowToTopEdge
 } = require("./window-config.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -26,6 +27,7 @@ let currentWindowPresetId = DEFAULT_WINDOW_PRESET_ID;
 let resizeSnapTimer = null;
 let isApplyingWindowPreset = false;
 let isDesktopUiVisible = true;
+let isPinningTopEdge = false;
 
 function createTrayIcon() {
   const svg = `
@@ -207,6 +209,24 @@ function wireWindowSizing(win) {
     }
 
     scheduleWindowPresetSnap();
+  });
+
+  win.on("will-move", (event, newBounds) => {
+    if (process.platform !== "win32" || isPinningTopEdge) {
+      return;
+    }
+
+    const pinnedBounds = pinWindowToTopEdge(newBounds);
+    if (!pinnedBounds || pinnedBounds.y === newBounds.y) {
+      return;
+    }
+
+    event.preventDefault();
+    isPinningTopEdge = true;
+    win.setPosition(pinnedBounds.x, pinnedBounds.y);
+    setTimeout(() => {
+      isPinningTopEdge = false;
+    }, 0);
   });
 }
 
