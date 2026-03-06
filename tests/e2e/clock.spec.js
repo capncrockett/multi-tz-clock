@@ -59,7 +59,7 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   await expect(showBezelLabels).not.toBeChecked();
 
   const showOuterCity = page.locator('#showOuterCity');
-  await expect(showOuterCity).toBeChecked();
+  await expect(showOuterCity).not.toBeChecked();
   await expect(showOuterCity).toBeDisabled();
 
   const showDebug = page.locator('#showDebug');
@@ -80,8 +80,8 @@ test('control toggles and bezel/city dependencies work', async ({ page }) => {
   await showBezelLabels.check();
   await expect(showBezelLabels).toBeChecked();
   await expect(showOuterCity).toBeEnabled();
-  await showOuterCity.uncheck();
-  await expect(showOuterCity).not.toBeChecked();
+  await showOuterCity.check();
+  await expect(showOuterCity).toBeChecked();
 
   await showDebug.check();
   await expect(showDebug).toBeChecked();
