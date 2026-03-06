@@ -21,7 +21,7 @@ Unlike typical world clock apps that show multiple separate dials, this project 
   - local storage persistence is shipped
   - geolocation-based local timezone detection is shipped
   - sub-hour timezone precision edge-case handling is shipped
-- Phase 2 desktop packaging is now in progress with an Electron proof of concept.
+- Phase 2 desktop packaging is now in progress with a Tauri target and an Electron proof of concept as the current fallback shell.
 - Phase 3 through Phase 5 have not started yet.
 
 ---
@@ -74,7 +74,7 @@ Non-goals:
 
 Goal: Wrap the browser app into a desktop widget-style window.
 
-Option A - Electron:
+Current fallback shell - Electron:
 
 - Minimal shell around existing web frontend
 - Frameless, always-on-top, transparent window
@@ -93,15 +93,18 @@ Shipped in this checkpoint:
 - Windows login startup wiring for the desktop app
 - Windows packaging flow via Electron Builder with installer output scripts
 
-Still pending in Phase 2:
-
-- Decision on whether to stay on Electron or pivot to Tauri before Phase 2 is considered complete
-
-Option B - Tauri:
+Selected target shell - Tauri:
 
 - Same frontend with Rust host
 - Smaller binary footprint
 - Native tray/autostart integration
+- Better fit for future size-sensitive platform work
+
+Still pending in Phase 2:
+
+- Port the current Electron widget shell behavior to Tauri
+- Re-establish tray, startup, persistence, preset sizing, and packaging parity under Tauri
+- Keep Electron as fallback until the Tauri host reaches parity and replaces it
 
 ---
 
@@ -122,6 +125,7 @@ Goal: Apple platform support.
 
 - macOS menu-bar/widget options via SwiftUI/WidgetKit
 - iOS WidgetKit snapshots + companion app for live animation
+- Preserve the shared clock/timezone logic so size-sensitive Apple surfaces do not inherit desktop-shell bloat
 
 ---
 
@@ -150,7 +154,7 @@ Goal: Android support.
 | Phase | Platform | Tech |
 |-------|----------|------|
 | 1 | Browser | HTML + Canvas + vanilla JS/CSS |
-| 2 | Desktop | Electron or Tauri |
+| 2 | Desktop | Tauri target, Electron fallback during migration |
 | 3 | Windows | WinUI / widget surface |
 | 4 | Apple | SwiftUI + WidgetKit |
 | 5 | Android | Jetpack Compose |

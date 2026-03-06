@@ -1,6 +1,13 @@
-# Architecture - Multi-TZ Clock (Phase 2 kickoff)
+# Architecture - Multi-TZ Clock (Phase 2 desktop migration)
 
 This document is written for AI coding agents and engineers migrating this project across platforms.
+
+Current platform direction:
+
+- Browser remains the product source of truth.
+- Electron is the working desktop fallback shell that proved the widget UX.
+- Tauri is the selected Phase 2 desktop target to replace the Electron shell once parity is reached.
+- Later Windows, macOS, iOS, and Android ports should preserve the shared clock/timezone logic instead of inheriting desktop-host implementation details.
 
 ## File Layout
 
@@ -106,11 +113,15 @@ Contains Electron-specific host logic:
 - desktop preference load/save under Electron `userData`
 - desktop app activation and quit flow
 
+This Electron host is now considered an interim fallback shell, not the final desktop direction.
+
 ### Packaging
 
 - `package.json` contains the Electron Builder config for Windows packaging.
 - `npm run desktop:pack` creates an unpacked app directory for local packaging smoke checks.
 - `npm run desktop:dist` builds the Windows NSIS installer into `dist/`.
+
+These packaging paths remain useful until a Tauri build path reaches feature parity.
 
 ### `desktop/preload.cjs`
 Contains a minimal `window.desktopShell` bridge and marks the document with `data-shell="desktop"` so the existing frontend can expose desktop-only drag affordances without changing browser behavior.
@@ -200,6 +211,7 @@ What ports cleanly to other platforms:
 - Offset-aware timezone grouping and nearest-city lookup
 - NOAA day/night logic
 - City catalog and color palette
+- Browser DOM/CSS behavior that can be hosted inside a thin shell without duplicating time logic
 
 What is platform-specific:
 
@@ -208,3 +220,4 @@ What is platform-specific:
 - Settings persistence
 - Tray/widget integration
 - Frameless drag regions and window lifecycle
+- Desktop packaging and installer behavior

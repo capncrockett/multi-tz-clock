@@ -95,7 +95,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - `ARCHITECTURE.md` - Technical deep dive for engineering handoff
 - `ROADMAP.md` - Multi-phase platform plan
 
-## Desktop POC (Phase 2 start)
+## Desktop POC (Phase 2 direction)
 
 - Electron host around the existing browser app
 - Frameless transparent window with a desktop-only drag bar
@@ -108,7 +108,14 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 
 Still pending for Phase 2:
 
-- Final Electron vs. Tauri host decision
+- Port the desktop shell to Tauri and keep Electron only as a fallback until parity is reached
+
+Platform direction:
+
+- Browser remains the source of truth for clock behavior and shared logic.
+- Electron is the current working desktop shell.
+- Tauri is the chosen target for the long-term desktop host because this app is small enough that bundled-browser overhead is disproportionate.
+- Future Windows, macOS, iOS, and Android ports should reuse the shared clock/timezone logic rather than inherit desktop-shell implementation details.
 
 ## Features (Phase 1 MVP)
 
