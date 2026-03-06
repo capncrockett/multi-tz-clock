@@ -88,14 +88,15 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Electron host around the existing browser app
 - Frameless transparent window with a desktop-only drag bar
 - Always-on-top behavior enabled by default
+- Desktop launches in clock-only mode by default; `Show UI` restores the full controls/chip chrome
 - Three preset window sizes (`xsmall`, `small`, `medium`) with fixed full-UI and clock-only bounds per preset and no desktop scrolling
-- System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, and quit
+- System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, Windows launch-on-startup, and quit
+- Desktop-only host preferences persist to a local JSON file under Electron `userData`; browser zones/toggles still persist in `localStorage` with IndexedDB fallback
 
 Still pending for Phase 2:
 
-- Auto-launch on startup
 - Packaging and distribution flow
-- Native shell preferences beyond tray controls
+- Final Electron vs. Tauri host decision
 
 ## Features (Phase 1 MVP)
 

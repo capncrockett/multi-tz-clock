@@ -88,11 +88,12 @@ Shipped in this checkpoint:
 - Frameless transparent always-on-top window
 - Desktop-only drag bar for moving the window
 - Resizable shell window
-- System tray menu with show/hide, pin toggle, and quit
+- System tray menu with UI toggle, pin toggle, launch-on-startup toggle, and quit
+- Desktop host preferences persisted locally under the Electron user-data directory
+- Windows login startup wiring for the desktop app
 
 Still pending in Phase 2:
 
-- Auto-launch on startup
 - Packaging/distribution flow
 - Decision on whether to stay on Electron or pivot to Tauri before Phase 2 is considered complete
 

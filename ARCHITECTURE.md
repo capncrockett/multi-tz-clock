@@ -11,6 +11,7 @@ assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
 desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests + main process
+desktop/preferences.cjs - Desktop host preference normalization + local JSON persistence
 desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
 desktop/preload.cjs  - Desktop-only bridge that tags the renderer for host-specific UI
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
@@ -85,12 +86,22 @@ Contains pure helpers for Electron host setup:
 - `getClockHtmlPath()`
 - `createTrayMenuEntries()`
 
+### `desktop/preferences.cjs`
+Contains desktop-host preference helpers:
+
+- `normalizeDesktopPreferences()`
+- `getDesktopPreferencesPath()`
+- `readDesktopPreferences()`
+- `writeDesktopPreferences()`
+
 ### `desktop/main.cjs`
 Contains Electron-specific host logic:
 
 - window creation and hide-to-tray lifecycle
 - tray icon and context menu
 - always-on-top toggle wiring
+- Windows login-startup wiring
+- desktop preference load/save under Electron `userData`
 - desktop app activation and quit flow
 
 ### `desktop/preload.cjs`

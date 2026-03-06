@@ -88,15 +88,26 @@ describe("desktop/window-config", () => {
     expect(fitBoundsWithinArea(null, null)).toBeNull();
   });
 
-  test("builds tray menu descriptors for ui visibility and pinned states", () => {
-    expect(createTrayMenuEntries({ isUiVisible: true, isAlwaysOnTop: true })).toEqual([
+  test("builds tray menu descriptors for ui visibility and desktop host preferences", () => {
+    expect(createTrayMenuEntries({
+      isUiVisible: true,
+      isAlwaysOnTop: true,
+      isLaunchOnStartup: true,
+      canToggleLaunchOnStartup: true
+    })).toEqual([
       { id: "toggle-ui-visibility", label: "Hide UI" },
       { id: "toggle-always-on-top", label: "Always on Top", type: "checkbox", checked: true },
+      { id: "toggle-launch-on-startup", label: "Launch on Startup", type: "checkbox", checked: true, enabled: true },
       { type: "separator" },
       { id: "quit", label: "Quit" }
     ]);
 
-    expect(createTrayMenuEntries({ isUiVisible: false, isAlwaysOnTop: false })[0]).toEqual({
+    expect(createTrayMenuEntries({
+      isUiVisible: false,
+      isAlwaysOnTop: false,
+      isLaunchOnStartup: false,
+      canToggleLaunchOnStartup: false
+    })[0]).toEqual({
       id: "toggle-ui-visibility",
       label: "Show UI"
     });

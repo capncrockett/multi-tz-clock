@@ -100,7 +100,12 @@ function getClockHtmlPath(repoRoot) {
   return path.join(repoRoot, "index.html");
 }
 
-function createTrayMenuEntries({ isUiVisible, isAlwaysOnTop }) {
+function createTrayMenuEntries({
+  isUiVisible,
+  isAlwaysOnTop,
+  isLaunchOnStartup = false,
+  canToggleLaunchOnStartup = false
+}) {
   return [
     {
       id: "toggle-ui-visibility",
@@ -111,6 +116,13 @@ function createTrayMenuEntries({ isUiVisible, isAlwaysOnTop }) {
       label: "Always on Top",
       type: "checkbox",
       checked: isAlwaysOnTop
+    },
+    {
+      id: "toggle-launch-on-startup",
+      label: "Launch on Startup",
+      type: "checkbox",
+      checked: !!isLaunchOnStartup,
+      enabled: !!canToggleLaunchOnStartup
     },
     { type: "separator" },
     {

@@ -18,6 +18,12 @@ const {
   DEFAULT_WINDOW_PRESET_ID,
   fitBoundsWithinArea
 } = require("./window-config.cjs");
+const {
+  DEFAULT_DESKTOP_PREFERENCES,
+  getDesktopPreferencesPath,
+  readDesktopPreferences,
+  writeDesktopPreferences
+} = require("./preferences.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
 const preloadPath = path.join(__dirname, "preload.cjs");
@@ -25,10 +31,13 @@ const preloadPath = path.join(__dirname, "preload.cjs");
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
-let currentWindowPresetId = DEFAULT_WINDOW_PRESET_ID;
+let currentWindowPresetId = DEFAULT_DESKTOP_PREFERENCES.windowPresetId || DEFAULT_WINDOW_PRESET_ID;
 let resizeSnapTimer = null;
 let isApplyingWindowPreset = false;
-let isDesktopUiVisible = true;
+let isDesktopUiVisible = DEFAULT_DESKTOP_PREFERENCES.isUiVisible;
+let isWindowAlwaysOnTop = DEFAULT_DESKTOP_PREFERENCES.isAlwaysOnTop;
+let isLaunchOnStartup = DEFAULT_DESKTOP_PREFERENCES.launchOnStartup;
+let desktopPreferencesPath = null;
 
 function createTrayIcon() {
   const svg = `
@@ -77,12 +86,69 @@ function toggleWindowVisibility() {
 }
 
 function toggleAlwaysOnTop() {
-  const win = getMainWindow();
-  if (!win) {
+  setWindowAlwaysOnTop(!isWindowAlwaysOnTop);
+}
+
+function supportsLaunchOnStartup() {
+  return process.platform === "win32" && typeof app.setLoginItemSettings === "function";
+}
+
+function applyLaunchOnStartupPreference() {
+  if (!supportsLaunchOnStartup()) {
     return;
   }
 
-  win.setAlwaysOnTop(!win.isAlwaysOnTop(), "screen-saver");
+  const settings = {
+    openAtLogin: isLaunchOnStartup
+  };
+  if (process.defaultApp) {
+    settings.path = process.execPath;
+    settings.args = [app.getAppPath()];
+  }
+
+  app.setLoginItemSettings(settings);
+}
+
+function persistDesktopPreferences() {
+  if (!desktopPreferencesPath) {
+    return;
+  }
+
+  try {
+    writeDesktopPreferences({
+      preferencesPath: desktopPreferencesPath,
+      preferences: {
+        windowPresetId: currentWindowPresetId,
+        isUiVisible: isDesktopUiVisible,
+        isAlwaysOnTop: isWindowAlwaysOnTop,
+        launchOnStartup: isLaunchOnStartup
+      }
+    });
+  } catch {
+    // Ignore persistence failures so the widget still runs.
+  }
+}
+
+function setWindowAlwaysOnTop(nextValue) {
+  isWindowAlwaysOnTop = !!nextValue;
+
+  const win = getMainWindow();
+  if (win) {
+    win.setAlwaysOnTop(isWindowAlwaysOnTop, "screen-saver");
+  }
+
+  persistDesktopPreferences();
+  refreshTrayMenu();
+}
+
+function toggleLaunchOnStartup() {
+  if (!supportsLaunchOnStartup()) {
+    return;
+  }
+
+  isLaunchOnStartup = !isLaunchOnStartup;
+  applyLaunchOnStartupPreference();
+  persistDesktopPreferences();
   refreshTrayMenu();
 }
 
@@ -123,6 +189,7 @@ function setDesktopUiVisible(nextVisible) {
     win.webContents.send("desktop:ui-visibility-changed", isDesktopUiVisible);
   }
 
+  persistDesktopPreferences();
   refreshTrayMenu();
 }
 
@@ -143,6 +210,9 @@ function buildTrayMenuItem(entry) {
   if (typeof entry.checked === "boolean") {
     item.checked = entry.checked;
   }
+  if (typeof entry.enabled === "boolean") {
+    item.enabled = entry.enabled;
+  }
 
   if (Array.isArray(entry.submenu)) {
     item.submenu = entry.submenu.map(buildTrayMenuItem);
@@ -154,6 +224,9 @@ function buildTrayMenuItem(entry) {
       break;
     case "toggle-always-on-top":
       item.click = toggleAlwaysOnTop;
+      break;
+    case "toggle-launch-on-startup":
+      item.click = toggleLaunchOnStartup;
       break;
     case "quit":
       item.click = quitApplication;
@@ -173,7 +246,9 @@ function refreshTrayMenu() {
   const win = getMainWindow();
   const entries = createTrayMenuEntries({
     isUiVisible: isDesktopUiVisible,
-    isAlwaysOnTop: !!win?.isAlwaysOnTop()
+    isAlwaysOnTop: !!(win ? win.isAlwaysOnTop() : isWindowAlwaysOnTop),
+    isLaunchOnStartup,
+    canToggleLaunchOnStartup: supportsLaunchOnStartup()
   });
 
   const template = entries.map(buildTrayMenuItem);
@@ -207,6 +282,7 @@ function applyWindowPreset(presetId) {
     keepWindowWithinVisibleWorkArea();
   }
   win.webContents.send("desktop:window-size-preset-changed", currentWindowPresetId);
+  persistDesktopPreferences();
   refreshTrayMenu();
 
   setTimeout(() => {
@@ -259,7 +335,7 @@ function createTray() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow(createMainWindowOptions({ preloadPath }));
-  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.setAlwaysOnTop(isWindowAlwaysOnTop, "screen-saver");
   mainWindow.loadFile(getClockHtmlPath(repoRoot));
   wireWindowSizing(mainWindow);
 
@@ -298,6 +374,13 @@ ipcMain.handle("desktop:set-ui-visibility", (_event, isVisible) => {
 });
 
 app.whenReady().then(() => {
+  desktopPreferencesPath = getDesktopPreferencesPath(app.getPath("userData"));
+  const savedPreferences = readDesktopPreferences({ preferencesPath: desktopPreferencesPath });
+  currentWindowPresetId = savedPreferences.windowPresetId;
+  isDesktopUiVisible = savedPreferences.isUiVisible;
+  isWindowAlwaysOnTop = savedPreferences.isAlwaysOnTop;
+  isLaunchOnStartup = savedPreferences.launchOnStartup;
+  applyLaunchOnStartupPreference();
   createMainWindow();
   createTray();
 
