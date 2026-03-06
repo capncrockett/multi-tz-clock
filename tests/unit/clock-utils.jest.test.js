@@ -4,7 +4,10 @@ const {
   is12hNumeralVisible,
   get24hNumeralStyle,
   get12hNumeralStyle,
-  getBezelLabelLayout
+  getBezelLabelLayout,
+  getHourHandValue,
+  getZoneGroupKey,
+  findNearestCity
 } = require('../../assets/js/clock-utils.js');
 
 describe('clock-utils: viewport tiers', () => {
@@ -72,5 +75,31 @@ describe('clock-utils: sizing/layout helpers', () => {
     expect(medium.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
     expect(small.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
     expect(xsmall.bezelRadius).toBe(162);
+  });
+});
+
+describe('clock-utils: timezone hand helpers', () => {
+  test('hour hand value preserves minute precision for both face modes', () => {
+    expect(getHourHandValue({ h: 5, h24: 17, m: 30, s: 0 }, false)).toBeCloseTo(5.5);
+    expect(getHourHandValue({ h: 5, h24: 17, m: 30, s: 30 }, true)).toBeCloseTo(17.5);
+  });
+
+  test('zone grouping key separates sub-hour offsets and 24h collisions', () => {
+    expect(getZoneGroupKey({ h: 5, h24: 5, m: 0 }, false)).toBe('5:00');
+    expect(getZoneGroupKey({ h: 5, h24: 5, m: 30 }, false)).toBe('5:30');
+    expect(getZoneGroupKey({ h: 1, h24: 1, m: 0 }, true)).toBe('1:00');
+    expect(getZoneGroupKey({ h: 1, h24: 13, m: 0 }, true)).toBe('13:00');
+  });
+
+  test('nearest city lookup resolves the closest catalog entry', () => {
+    const catalog = [
+      { label: 'Honolulu', tz: 'Pacific/Honolulu', lat: 21.31, lon: -157.86 },
+      { label: 'Tokyo', tz: 'Asia/Tokyo', lat: 35.68, lon: 139.69 },
+      { label: 'London', tz: 'Europe/London', lat: 51.51, lon: -0.13 }
+    ];
+
+    expect(findNearestCity(21.3, -157.9, catalog)).toEqual(catalog[0]);
+    expect(findNearestCity(35.7, 139.7, catalog)).toEqual(catalog[1]);
+    expect(findNearestCity(NaN, 0, catalog)).toBeNull();
   });
 });

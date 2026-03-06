@@ -66,7 +66,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 
 - `index.html` - Markup and UI structure
 - `assets/css/main.css` - App styles and responsive/theming rules
-- `assets/js/clock-utils.js` - Shared pure logic for layout/tier rules (browser + Node)
+- `assets/js/clock-utils.js` - Shared pure logic for layout tiers, timezone grouping, and nearest-city lookup
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
 - `tests/unit/*.jest.test.js` - Jest unit tests
 - `tests/integration/*.integration.jest.test.js` - Jest integration tests
@@ -81,14 +81,17 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - 12h / 24h toggle
 - 24h face day/night shading via NOAA sunrise/sunset math
 - Add/remove zones from a 31-city catalog
+- Local storage persistence for zones and display toggles
+- `Local` zone action using geolocation with browser-timezone fallback
+- Minute-accurate hand grouping for +30 / +45 offset zones
 - Responsive compact mode for small viewports
 - Accessible controls, skip link, and live region updates
 - Light/dark theme support via `prefers-color-scheme`
 - Reduced motion support via `prefers-reduced-motion`
 
-## Important Note on Timezone Precision
+## Timezone Precision
 
-Phase 1.1 intentionally keeps existing hour-hand behavior and does not yet implement special rendering for sub-hour timezone offsets (for example +30 or +45 minute offsets). This is a deferred stretch goal for later phases.
+Hour-hand grouping is now minute-accurate for both 12h and 24h faces, so sub-hour offsets such as `UTC+5:30` and `UTC+5:45` keep distinct hand positions instead of collapsing into one shared hour bucket.
 
 ## Controls
 
@@ -96,6 +99,7 @@ Phase 1.1 intentionally keeps existing hour-hand behavior and does not yet imple
 - `Sec`: second-hand toggle
 - `24h`: 24-hour face toggle
 - `City`: switches bezel text between TZ abbreviation and city name (disabled when Bezel is off)
+- `Local`: adds the closest catalog city for your current location, with browser-timezone fallback if geolocation is unavailable
 - `Debug`: show live viewport/layout overlay stats
 - `Frames`: show clickable component frame outlines (disabled when Debug is off)
 

@@ -9,6 +9,28 @@ async function gotoApp(page) {
   await expect(page.locator('#clock')).toBeVisible();
 }
 
+async function freezeTime(page, isoString) {
+  await page.addInitScript((fixedIsoString) => {
+    const fixedTime = new Date(fixedIsoString).valueOf();
+    const RealDate = Date;
+    class MockDate extends RealDate {
+      constructor(...args) {
+        super(...(args.length ? args : [fixedTime]));
+      }
+      static now() {
+        return fixedTime;
+      }
+      static parse(value) {
+        return RealDate.parse(value);
+      }
+      static UTC(...args) {
+        return RealDate.UTC(...args);
+      }
+    }
+    globalThis.Date = MockDate;
+  }, isoString);
+}
+
 test('loads and initializes without runtime errors', async ({ page }) => {
   const runtimeErrors = [];
   page.on('pageerror', (err) => runtimeErrors.push(err.message));
@@ -91,6 +113,66 @@ test('zone add and remove flow updates chip count', async ({ page }) => {
   await expect(zones).toHaveCount(initialCount);
 });
 
+test('persists zones and display toggles across reloads', async ({ page }) => {
+  await gotoApp(page);
+
+  const zones = page.locator('.zone-item');
+  const initialCount = await zones.count();
+  const addSelect = page.locator('#addTzSelect');
+
+  const zoneToAdd = await addSelect.evaluate((el) => {
+    const option = Array.from(el.options).find((entry) => entry.value);
+    return option ? { value: option.value, label: option.textContent } : null;
+  });
+  expect(zoneToAdd).not.toBeNull();
+
+  await page.locator('#showBezelLabels').check();
+  await addSelect.selectOption(zoneToAdd.value);
+  await expect(zones).toHaveCount(initialCount + 1);
+
+  await page.reload();
+  await expect(page.locator('#showBezelLabels')).toBeChecked();
+  await expect(page.locator('.zone-item')).toHaveCount(initialCount + 1);
+  await expect(page.locator('.zone-item', { hasText: zoneToAdd.label })).toBeVisible();
+});
+
+test('local zone action adds the nearest catalog city from geolocation', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition(success) {
+          success({
+            coords: {
+              latitude: 21.31,
+              longitude: -157.86
+            }
+          });
+        }
+      }
+    });
+  });
+
+  await gotoApp(page);
+  const initialCount = await page.locator('.zone-item').count();
+
+  await page.locator('#addLocalZone').click();
+
+  await expect(page.locator('.zone-item')).toHaveCount(initialCount + 1);
+  await expect(page.locator('.zone-item', { hasText: 'Honolulu' })).toBeVisible();
+});
+
+test('sub-hour offsets keep separate hour hands in the deduped count', async ({ page }) => {
+  await freezeTime(page, '2026-03-06T12:10:00Z');
+  await gotoApp(page);
+
+  await page.locator('#addTzSelect').selectOption('Asia/Karachi');
+  await page.locator('#addTzSelect').selectOption('Asia/Kolkata');
+  await page.locator('#showDebug').check();
+
+  await expect(page.locator('#debug-main')).toContainText('active=6 deduped=6');
+});
+
 test('small and xsmall viewport tiers update dynamically', async ({ page }) => {
   await page.setViewportSize({ width: 280, height: 500 });
   await gotoApp(page);
@@ -131,4 +213,5 @@ test('accessibility hooks are present', async ({ page }) => {
   await expect(page.locator('#controls')).toHaveAttribute('role', 'toolbar');
   await expect(page.locator('#zone-bar')).toHaveAttribute('role', 'list');
   await expect(page.locator('#sr-times')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#zone-status')).toHaveAttribute('aria-live', 'polite');
 });

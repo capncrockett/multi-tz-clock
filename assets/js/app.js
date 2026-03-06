@@ -40,14 +40,17 @@ const HAND_COLORS = [
   '#e94560', '#4e9af1', '#2ecc71', '#e9b44c', '#9b59b6', '#e67e22',
 ];
 const MAX_ZONES = HAND_COLORS.length;
-
-// ── STATE ───────────────────────────────────────────────────────────
-let zones = [
+const STORAGE_KEY = 'multi-tz-clock:v1';
+const PERSISTED_CONTROL_IDS = ['showBezelLabels', 'showOuterCity', 'showSeconds', 'use24h'];
+const DEFAULT_ZONES = [
   { label: 'NYC',    tz: 'America/New_York',    color: HAND_COLORS[0] },
   { label: 'London', tz: 'Europe/London',       color: HAND_COLORS[1] },
   { label: 'Tokyo',  tz: 'Asia/Tokyo',          color: HAND_COLORS[2] },
-  { label: 'Sydney', tz: 'Australia/Sydney',     color: HAND_COLORS[3] },
+  { label: 'Sydney', tz: 'Australia/Sydney',    color: HAND_COLORS[3] },
 ];
+
+// ── STATE ───────────────────────────────────────────────────────────
+let zones = DEFAULT_ZONES.map((zone) => ({ ...zone }));
 
 const canvas = document.getElementById('clock');
 const ctx = canvas.getContext('2d');
@@ -81,6 +84,36 @@ const getBezelLabelLayout = ClockUtils.getBezelLabelLayout || ((radius, handLeng
   fontSize: xsmall ? 10 : (small ? 12 : 13),
   bezelRadius: xsmall ? (radius + 12) : Math.min(radius * 0.62, handLength + (small ? 14 : 18))
 }));
+const getHourHandValue = ClockUtils.getHourHandValue || ((timeParts, use24) => {
+  const hour = use24 ? timeParts.h24 : timeParts.h;
+  return hour + (timeParts.m / 60);
+});
+const getZoneGroupKey = ClockUtils.getZoneGroupKey || ((timeParts, use24) => {
+  const hour = use24 ? timeParts.h24 : timeParts.h;
+  return `${hour}:${String(timeParts.m).padStart(2, '0')}`;
+});
+const findNearestCity = ClockUtils.findNearestCity || ((lat, lon, catalog) => {
+  if (!Array.isArray(catalog) || catalog.length === 0) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const toRadians = (value) => value * (Math.PI / 180);
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (const city of catalog) {
+    if (!Number.isFinite(city?.lat) || !Number.isFinite(city?.lon)) continue;
+    const dLat = toRadians(city.lat - lat);
+    const dLon = toRadians(city.lon - lon);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRadians(lat)) * Math.cos(toRadians(city.lat))
+      * Math.sin(dLon / 2) ** 2;
+    const distance = 2 * 6371 * Math.asin(Math.sqrt(a));
+    if (distance < bestDistance) {
+      best = city;
+      bestDistance = distance;
+    }
+  }
+  return best;
+});
 let isSmall = false;
 let isXSmall = false;
 let viewportTier = 'medium';
@@ -93,6 +126,95 @@ function isLightMode() {
 }
 function is24h() {
   return document.getElementById('use24h').checked;
+}
+
+function getStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function announceStatus(message) {
+  const el = document.getElementById('zone-status');
+  if (!el) return;
+  el.textContent = '';
+  window.setTimeout(() => {
+    el.textContent = message;
+  }, 0);
+}
+
+function getPersistedControlState() {
+  const controls = {};
+  for (const id of PERSISTED_CONTROL_IDS) {
+    const el = document.getElementById(id);
+    if (el) controls[id] = !!el.checked;
+  }
+  return controls;
+}
+
+function sanitizePersistedZones(value) {
+  if (!Array.isArray(value)) return null;
+  const validTzs = new Set(CITY_CATALOG.map((city) => city.tz));
+  const seen = new Set();
+  const out = [];
+
+  for (const zone of value) {
+    if (!zone || typeof zone !== 'object') continue;
+    if (typeof zone.tz !== 'string' || !validTzs.has(zone.tz) || seen.has(zone.tz)) continue;
+    const city = CITY_CATALOG.find((entry) => entry.tz === zone.tz);
+    if (!city) continue;
+    const color = HAND_COLORS.includes(zone.color) ? zone.color : HAND_COLORS[out.length % HAND_COLORS.length];
+    out.push({
+      label: typeof zone.label === 'string' && zone.label.trim() ? zone.label : city.label,
+      tz: city.tz,
+      color
+    });
+    seen.add(city.tz);
+    if (out.length >= MAX_ZONES) break;
+  }
+
+  return out.length > 0 ? out : null;
+}
+
+function restorePersistedState() {
+  const storage = getStorage();
+  if (!storage) return;
+
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const restoredZones = sanitizePersistedZones(parsed?.zones);
+    if (restoredZones) {
+      zones = restoredZones;
+    }
+
+    if (parsed?.controls && typeof parsed.controls === 'object') {
+      for (const id of PERSISTED_CONTROL_IDS) {
+        const el = document.getElementById(id);
+        if (!el || typeof parsed.controls[id] !== 'boolean') continue;
+        el.checked = parsed.controls[id];
+      }
+    }
+  } catch {
+    // Ignore malformed or unavailable persisted state and keep defaults.
+  }
+}
+
+function persistAppState() {
+  const storage = getStorage();
+  if (!storage) return;
+
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify({
+      zones,
+      controls: getPersistedControlState()
+    }));
+  } catch {
+    // Ignore quota/security failures so rendering still works offline and from file URLs.
+  }
 }
 
 function syncCityControlState() {
@@ -225,8 +347,15 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 window.addEventListener('resize', resize);
+restorePersistedState();
 resize();
-document.getElementById('showBezelLabels').addEventListener('change', syncCityControlState);
+document.getElementById('showBezelLabels').addEventListener('change', () => {
+  syncCityControlState();
+  persistAppState();
+});
+document.getElementById('showOuterCity').addEventListener('change', persistAppState);
+document.getElementById('showSeconds').addEventListener('change', persistAppState);
+document.getElementById('use24h').addEventListener('change', persistAppState);
 document.getElementById('showDebug').addEventListener('change', syncDebugControlState);
 document.getElementById('showDebugFrames').addEventListener('change', syncDebugControlState);
 syncCityControlState();
@@ -335,12 +464,12 @@ function isDaytime(tz) {
   return sr < ss ? (utcH >= sr && utcH < ss) : (utcH >= sr || utcH < ss);
 }
 
-/** Merge zones sharing the same 12h hour into one entry with combined labels. */
-function dedupeZones(list) {
+/** Merge only zones that resolve to the same visible hand position for the current face mode. */
+function dedupeZones(list, use24) {
   const map = new Map();
   for (const z of list) {
     const t = getTimeInTZ(z.tz);
-    const key = t.h;
+    const key = getZoneGroupKey(t, use24);
     if (map.has(key)) {
       const existing = map.get(key);
       if (!existing.label.includes(z.label)) {
@@ -363,6 +492,53 @@ function sortByTime(deduped) {
 }
 
 // ── ZONE BAR ────────────────────────────────────────────────────────
+
+function getBrowserLocalCity() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return CITY_CATALOG.find((city) => city.tz === tz) || null;
+  } catch {
+    return null;
+  }
+}
+
+function finishAddingLocalZone(city, source) {
+  if (!city) {
+    announceStatus('Local timezone is not available in the current city catalog.');
+    return;
+  }
+  if (zones.some((zone) => zone.tz === city.tz)) {
+    announceStatus(`${city.label} is already on the clock.`);
+    return;
+  }
+  const added = addZone(city.tz, { persist: true });
+  if (!added) {
+    announceStatus('Unable to add another timezone right now.');
+    return;
+  }
+  const sourceSuffix = source === 'geolocation' ? '' : ' using browser timezone fallback';
+  announceStatus(`Added local zone: ${city.label}${sourceSuffix}.`);
+}
+
+function addLocalZone() {
+  if (zones.length >= MAX_ZONES) return;
+
+  const fallbackCity = getBrowserLocalCity();
+  const geolocation = navigator.geolocation;
+  if (!geolocation || typeof geolocation.getCurrentPosition !== 'function') {
+    finishAddingLocalZone(fallbackCity, 'browser');
+    return;
+  }
+
+  geolocation.getCurrentPosition(
+    (position) => {
+      const city = findNearestCity(position.coords.latitude, position.coords.longitude, CITY_CATALOG);
+      finishAddingLocalZone(city || fallbackCity, city ? 'geolocation' : 'browser');
+    },
+    () => finishAddingLocalZone(fallbackCity, 'browser'),
+    { enableHighAccuracy: false, timeout: 5000, maximumAge: 600000 }
+  );
+}
 
 /** Full DOM rebuild of zone chips + add-zone select. Called on zone add/remove. */
 function renderZoneBar() {
@@ -389,12 +565,15 @@ function renderZoneBar() {
       .filter(c => !usedTzs.has(c.tz))
       .map(c => `<option value="${c.tz}">${c.label}</option>`)
       .join('');
-    html += `<select id="addTzSelect" aria-label="Add a time zone">
+    html += `<button id="addLocalZone" class="zone-action" type="button" aria-label="Add your local time zone">Local</button>
+    <select id="addTzSelect" class="zone-action" aria-label="Add a time zone">
       <option value="">+ Add…</option>${opts}
     </select>`;
   }
   bar.innerHTML = html;
 
+  const localButton = document.getElementById('addLocalZone');
+  if (localButton) localButton.addEventListener('click', addLocalZone);
   const sel = document.getElementById('addTzSelect');
   if (sel) sel.addEventListener('change', () => { if (sel.value) addZone(sel.value); });
 }
@@ -416,19 +595,23 @@ function updateZoneBarTimes() {
   }
 }
 
-function addZone(tz) {
-  if (zones.length >= MAX_ZONES) return;
+function addZone(tz, options = {}) {
+  if (zones.length >= MAX_ZONES) return false;
+  if (zones.some((zone) => zone.tz === tz)) return false;
   const city = CITY_CATALOG.find(c => c.tz === tz);
-  if (!city) return;
+  if (!city) return false;
   const usedColors = new Set(zones.map(z => z.color));
   const color = HAND_COLORS.find(c => !usedColors.has(c)) || HAND_COLORS[zones.length % HAND_COLORS.length];
   zones.push({ label: city.label, tz: city.tz, color });
   renderZoneBar();
+  if (options.persist !== false) persistAppState();
+  return true;
 }
 
 function removeZone(index) {
   zones.splice(index, 1);
   renderZoneBar();
+  persistAppState();
 }
 window.removeZone = removeZone;
 
@@ -703,14 +886,14 @@ function draw() {
   drawFace(cx, cy, r);
 
   const showBezelLabels = document.getElementById('showBezelLabels').checked;
-  const deduped = dedupeZones(zones);
-  const handWidth = isSmall ? 3.5 : 5;
   const use24 = is24h();
+  const deduped = dedupeZones(zones, use24);
+  const handWidth = isSmall ? 3.5 : 5;
   const divisor = use24 ? 24 : 12;
 
   for (const z of deduped) {
     const t = z._time || getTimeInTZ(z.tz);
-    const hVal = use24 ? (t.h24 + t.m / 60) : (t.h + t.m / 60);
+    const hVal = getHourHandValue(t, use24);
     const hourAngle = (hVal / divisor) * Math.PI * 2 - Math.PI / 2;
     drawHand(cx, cy, r, hourAngle, r * 0.468, handWidth, z.color, z.label, z.tz, showBezelLabels);
   }

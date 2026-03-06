@@ -154,7 +154,7 @@
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
-  #zone-bar select {
+  .zone-action {
     background: var(--bg-surface);
     color: var(--text);
     border: 1px solid var(--border);
@@ -164,7 +164,10 @@
     cursor: pointer;
     max-width: 180px;
   }
-  #zone-bar select:focus {
+  button.zone-action {
+    font-weight: 600;
+  }
+  .zone-action:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }

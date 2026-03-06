@@ -17,10 +17,10 @@ Unlike typical world clock apps that show multiple separate dials, this project 
   - Jest unit/integration coverage
   - Playwright browser smoke coverage
   - repo guard hooks and workflow scripts
-- Deferred browser items are still deferred:
-  - local storage persistence
-  - geolocation-based local timezone detection
-  - sub-hour timezone precision edge-case handling
+- The deferred browser backlog is now closed:
+  - local storage persistence is shipped
+  - geolocation-based local timezone detection is shipped
+  - sub-hour timezone precision edge-case handling is shipped
 - Phase 2 desktop packaging has not started yet.
 - Phase 3 through Phase 5 have not started yet.
 
@@ -41,16 +41,13 @@ Shipped:
 - Shared UTC minute/second hands
 - 31-city catalog with lat/lon for sunrise/sunset
 - Add/remove zone workflow with chip bar
+- Local storage persistence for zones and display toggles
+- Local zone add action using geolocation with browser-timezone fallback
 - Day/night shading using NOAA solar math
+- Minute-accurate hand grouping for sub-hour offsets (for example +30 / +45)
 - Responsive behavior for compact screens
 - Light/dark theming and reduced-motion support
 - Accessibility baseline (skip link, ARIA roles/labels, live region)
-
-Deferred from Phase 1:
-
-- Local storage persistence
-- Geolocation-based local timezone detection
-- Sub-hour timezone precision edge-case handling (for example +30 / +45 offsets)
 
 ---
 
@@ -70,7 +67,6 @@ Shipped:
 Non-goals:
 
 - No desktop shell or native host work yet
-- No change to the deferred sub-hour timezone precision behavior
 
 ---
 
@@ -130,7 +126,7 @@ Goal: Android support.
 - Three label modes are first-class UI behavior.
 - NOAA-based day/night logic is retained.
 - Browser launch remains no-build and dependency-free.
-- Sub-hour timezone precision treatment is intentionally deferred to a later phase.
+- Minute-accurate timezone hand grouping is preserved as browser behavior to carry into later platform ports.
 
 ---
 

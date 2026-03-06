@@ -7,7 +7,7 @@ This document is written for AI coding agents and engineers migrating this proje
 ```
 index.html           - App shell markup and DOM structure
 assets/css/main.css  - All styles (theme vars, layout, accessibility, responsive rules)
-assets/js/clock-utils.js - Shared pure layout/tier helpers (browser + Node)
+assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
 tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
@@ -32,6 +32,7 @@ Contains:
 - `#controls` toolbar
 - `<canvas id="clock">`
 - `#sr-times` live region
+- `#zone-status` live region
 - `#zone-bar`
 4. External script references (both `defer`):
 - `assets/js/clock-utils.js`
@@ -52,10 +53,11 @@ Contains these logical sections:
 - CONSTANTS: `HAND_COLORS[]`, `MAX_ZONES`
 - STATE: `zones[]`, canvas context, viewport flags
 - SIZING: `resize()`
-- HELPERS: `getTimeInTZ()`, `getTzAbbrev()`
+- PERSISTENCE: `restorePersistedState()`, `persistAppState()`
+- HELPERS: `getTimeInTZ()`, `getTzAbbrev()`, local-zone resolution
 - NOAA SUNRISE/SUNSET: `getSunTimes()`, `isDaytime()`
 - DEDUPE/SORT: `dedupeZones()`, `sortByTime()`
-- ZONE BAR: `renderZoneBar()`, `updateZoneBarTimes()`, `addZone()`, `removeZone()`
+- ZONE BAR: `renderZoneBar()`, `updateZoneBarTimes()`, `addZone()`, `removeZone()`, `addLocalZone()`
 - DRAWING: `drawDayNightFace()`, `drawPlainFace()`, `drawFace()`, `drawHand()`, `drawMinuteSecondHands()`
 - ACCESSIBILITY: `updateScreenReader()`
 - MAIN LOOP: `draw()`
@@ -67,6 +69,8 @@ Contains pure functions used by both browser runtime and Jest tests:
 - `is24hNumeralVisible()`, `is12hNumeralVisible()`
 - `get24hNumeralStyle()`, `get12hNumeralStyle()`
 - `getBezelLabelLayout()`
+- `getHourHandValue()`, `getZoneGroupKey()`
+- `findNearestCity()`
 
 ## Automated Browser Testing
 
@@ -76,6 +80,9 @@ Contains pure functions used by both browser runtime and Jest tests:
 - app load/runtime error check
 - control toggles and debug dependencies
 - zone add/remove flow
+- local storage persistence across reloads
+- geolocation-based local zone add flow
+- sub-hour timezone dedupe precision
 - compact sizing at small viewport
 - dynamic tier transitions (`small` -> `xsmall`)
 - key accessibility hooks (`skip-link`, toolbar/list roles, live region)
@@ -111,6 +118,7 @@ draw()
 - `isXSmall`: Extra-small rendering flag.
 - `viewportTier`: `medium | small | xsmall`.
 - `lastSrUpdate`: Minute-level throttle for live region announcements.
+- `localStorage`: Optional browser-only backing store for zones and persisted control toggles.
 - UI control state is read from DOM each frame.
 
 ## Compatibility Contracts
@@ -125,15 +133,16 @@ draw()
 - Motion behavior respects `prefers-reduced-motion`.
 - Skip link, ARIA roles, and live region behavior are preserved.
 
-## Deferred Edge Case
+## Timezone Precision
 
-Sub-hour timezone precision (for example, +30 or +45 minute offset-specific hour-hand treatment) is deferred. Phase 1.1 extraction preserves existing behavior intentionally and does not change hand math.
+Timezone hand grouping now keys off the visible hour-hand position for the active face mode. That preserves distinct hands for sub-hour offsets such as `UTC+5:30` and keeps 24h-only collisions from merging into a 12h bucket.
 
 ## Migration Notes
 
 What ports cleanly to other platforms:
 
 - Clock geometry and hand-angle math
+- Offset-aware timezone grouping and nearest-city lookup
 - NOAA day/night logic
 - City catalog and color palette
 

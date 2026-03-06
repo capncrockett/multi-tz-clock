@@ -46,12 +46,54 @@
     };
   }
 
+  function getHourHandValue(timeParts, use24h) {
+    const hour = use24h ? timeParts.h24 : timeParts.h;
+    const minute = Number(timeParts.m) || 0;
+    return hour + (minute / 60);
+  }
+
+  function getZoneGroupKey(timeParts, use24h) {
+    const hour = use24h ? timeParts.h24 : timeParts.h;
+    return `${hour}:${String(timeParts.m).padStart(2, '0')}`;
+  }
+
+  function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+    const earthRadiusKm = 6371;
+    const toRadians = (value) => value * (Math.PI / 180);
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2))
+      * Math.sin(dLon / 2) ** 2;
+    return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+  }
+
+  function findNearestCity(lat, lon, catalog) {
+    if (!Array.isArray(catalog) || catalog.length === 0) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+    let best = null;
+    let bestDistance = Infinity;
+    for (const city of catalog) {
+      if (!Number.isFinite(city?.lat) || !Number.isFinite(city?.lon)) continue;
+      const distance = haversineDistanceKm(lat, lon, city.lat, city.lon);
+      if (distance < bestDistance) {
+        best = city;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
   return {
     deriveViewportFlags,
     is24hNumeralVisible,
     is12hNumeralVisible,
     get24hNumeralStyle,
     get12hNumeralStyle,
-    getBezelLabelLayout
+    getBezelLabelLayout,
+    getHourHandValue,
+    getZoneGroupKey,
+    findNearestCity
   };
 });
