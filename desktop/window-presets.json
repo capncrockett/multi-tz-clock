@@ -1,0 +1,23 @@
+[
+  {
+    "id": "xsmall",
+    "label": "X-Small",
+    "width": 232,
+    "fullHeight": 580,
+    "clockOnlyHeight": 232
+  },
+  {
+    "id": "small",
+    "label": "Small",
+    "width": 312,
+    "fullHeight": 660,
+    "clockOnlyHeight": 312
+  },
+  {
+    "id": "medium",
+    "label": "Medium",
+    "width": 420,
+    "fullHeight": 560,
+    "clockOnlyHeight": 372
+  }
+]

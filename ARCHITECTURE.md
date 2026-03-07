@@ -18,6 +18,7 @@ assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
 assets/js/desktop-shell.js - Browser-safe desktop bridge that lets Electron and Tauri expose the same renderer contract
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
+desktop/window-presets.json - Shared desktop size presets consumed by both Electron and Tauri hosts
 desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests + main process
 desktop/preferences.cjs - Desktop host preference normalization + local JSON persistence
 desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
@@ -95,6 +96,7 @@ Contains these logical sections:
 ### `desktop/window-config.cjs`
 Contains pure helpers for Electron host setup:
 
+- shared preset loading from `desktop/window-presets.json`
 - `createMainWindowOptions()`
 - `getClockHtmlPath()`
 - `createTrayMenuEntries()`
@@ -240,6 +242,7 @@ What is platform-specific:
 Current Tauri spike boundary:
 
 - Browser HTML/CSS/JS remains canonical and is loaded directly by Tauri
+- Electron and Tauri now share the same window preset definitions from `desktop/window-presets.json`
 - Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, launch-on-startup, hide-on-close behavior, local host preference persistence, and preset snap/work-area fitting behavior
 - Tauri host preferences currently live in a JSON file under the app config directory, separate from browser `localStorage` / IndexedDB state
 - The main remaining Tauri parity work is broader desktop-host verification and any final cleanup needed before Electron removal

@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -17,6 +17,23 @@ const TOGGLE_LAUNCH_ON_STARTUP_MENU_ID: &str = "toggle-launch-on-startup";
 const QUIT_MENU_ID: &str = "quit";
 const DEFAULT_WINDOW_PRESET_ID: &str = "medium";
 const DESKTOP_PREFERENCES_FILE_NAME: &str = "desktop-preferences.json";
+
+#[derive(Clone, Deserialize)]
+struct WindowPreset {
+    id: String,
+    #[cfg_attr(not(test), allow(dead_code))]
+    label: String,
+    width: u32,
+    #[serde(rename = "fullHeight")]
+    full_height: u32,
+    #[serde(rename = "clockOnlyHeight")]
+    clock_only_height: u32,
+}
+
+static WINDOW_SIZE_PRESETS: LazyLock<Vec<WindowPreset>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../desktop/window-presets.json"))
+        .expect("desktop/window-presets.json should be valid")
+});
 
 struct DesktopHostState {
     inner: Mutex<DesktopHostStateInner>,
@@ -95,38 +112,50 @@ impl PersistedDesktopPreferences {
 }
 
 fn normalize_preset_id(preset_id: &str) -> &'static str {
-    match preset_id {
-        "xsmall" => "xsmall",
-        "small" => "small",
-        _ => DEFAULT_WINDOW_PRESET_ID,
-    }
+    WINDOW_SIZE_PRESETS
+        .iter()
+        .find(|preset| preset.id == preset_id)
+        .map(|preset| preset.id.as_str())
+        .unwrap_or(DEFAULT_WINDOW_PRESET_ID)
+}
+
+fn get_window_preset(preset_id: &str) -> &WindowPreset {
+    let normalized_preset_id = normalize_preset_id(preset_id);
+    WINDOW_SIZE_PRESETS
+        .iter()
+        .find(|preset| preset.id == normalized_preset_id)
+        .unwrap_or_else(|| {
+            WINDOW_SIZE_PRESETS
+                .iter()
+                .find(|preset| preset.id == DEFAULT_WINDOW_PRESET_ID)
+                .expect("default window preset should exist")
+        })
 }
 
 fn get_preset_bounds(preset_id: &str, is_ui_visible: bool) -> (f64, f64) {
-    match (normalize_preset_id(preset_id), is_ui_visible) {
-        ("xsmall", true) => (232.0, 580.0),
-        ("xsmall", false) => (232.0, 232.0),
-        ("small", true) => (312.0, 660.0),
-        ("small", false) => (312.0, 312.0),
-        ("medium", true) => (420.0, 560.0),
-        ("medium", false) => (420.0, 372.0),
-        _ => (420.0, 372.0),
-    }
+    let preset = get_window_preset(preset_id);
+    (
+        preset.width as f64,
+        if is_ui_visible {
+            preset.full_height as f64
+        } else {
+            preset.clock_only_height as f64
+        },
+    )
 }
 
 fn get_closest_window_preset_id(width: u32, height: u32, is_ui_visible: bool) -> &'static str {
     let safe_width = width as f64;
     let safe_height = height as f64;
-    let presets = ["xsmall", "small", "medium"];
     let mut best_preset_id = DEFAULT_WINDOW_PRESET_ID;
     let mut best_delta = f64::MAX;
 
-    for preset_id in presets {
-        let (preset_width, preset_height) = get_preset_bounds(preset_id, is_ui_visible);
+    for preset in WINDOW_SIZE_PRESETS.iter() {
+        let (preset_width, preset_height) = get_preset_bounds(&preset.id, is_ui_visible);
         let next_delta = ((preset_width - safe_width).powi(2) + (preset_height - safe_height).powi(2)).sqrt();
         if next_delta < best_delta {
             best_delta = next_delta;
-            best_preset_id = preset_id;
+            best_preset_id = normalize_preset_id(&preset.id);
         }
     }
 
@@ -586,8 +615,8 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_bounds_within_area, get_closest_window_preset_id, read_desktop_preferences,
-        PersistedDesktopPreferences,
+        fit_bounds_within_area, get_closest_window_preset_id, get_window_preset,
+        read_desktop_preferences, PersistedDesktopPreferences, WINDOW_SIZE_PRESETS,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -658,6 +687,15 @@ mod tests {
         assert_eq!(preferences.window_preset_id, "small");
         assert!(preferences.is_ui_visible);
         assert!(!preferences.is_always_on_top);
+    }
+
+    #[test]
+    fn shared_window_presets_include_the_expected_default_layouts() {
+        assert_eq!(WINDOW_SIZE_PRESETS.len(), 3);
+        assert_eq!(get_window_preset("small").width, 312);
+        assert_eq!(get_window_preset("medium").full_height, 560);
+        assert_eq!(get_window_preset("xsmall").clock_only_height, 232);
+        assert_eq!(get_window_preset("small").label, "Small");
     }
 
     #[test]

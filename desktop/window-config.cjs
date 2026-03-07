@@ -1,10 +1,10 @@
 const path = require("node:path");
 
-const WINDOW_SIZE_PRESETS = Object.freeze([
-  Object.freeze({ id: "xsmall", label: "X-Small", width: 232, fullHeight: 580, clockOnlyHeight: 232 }),
-  Object.freeze({ id: "small", label: "Small", width: 312, fullHeight: 660, clockOnlyHeight: 312 }),
-  Object.freeze({ id: "medium", label: "Medium", width: 420, fullHeight: 560, clockOnlyHeight: 372 })
-]);
+const rawWindowSizePresets = require("./window-presets.json");
+
+const WINDOW_SIZE_PRESETS = Object.freeze(
+  rawWindowSizePresets.map((preset) => Object.freeze({ ...preset }))
+);
 const DEFAULT_WINDOW_PRESET_ID = "medium";
 const DEFAULT_WINDOW_PRESET = WINDOW_SIZE_PRESETS.find((preset) => preset.id === DEFAULT_WINDOW_PRESET_ID);
 const MIN_WINDOW_PRESET = WINDOW_SIZE_PRESETS[0];
