@@ -137,7 +137,8 @@ Contains the desktop-shell bridge used outside Electron:
 
 - leaves browser behavior untouched when no desktop host is present
 - preserves Electron's existing `window.desktopShell` contract when the preload bridge already provided it
-- maps Tauri's global window APIs onto the same `getWindowSizePreset()`, `setWindowSizePreset()`, `getUiVisibility()`, and `setUiVisibility()` hooks used by `assets/js/app.js`
+- maps Tauri `invoke` commands onto the same `getWindowSizePreset()`, `setWindowSizePreset()`, `getUiVisibility()`, and `setUiVisibility()` hooks used by `assets/js/app.js`
+- listens for Tauri-emitted desktop host events so tray actions can keep the existing renderer contract synchronized
 - marks the document with `data-shell="desktop"` so the existing CSS and renderer logic stay source-of-truth
 
 ### `assets/js/clock-utils.js`
@@ -239,5 +240,5 @@ What is platform-specific:
 Current Tauri spike boundary:
 
 - Browser HTML/CSS/JS remains canonical and is loaded directly by Tauri
-- Tauri currently handles only the thin window host boundary plus icon/config scaffolding
-- Electron-specific tray, startup, and preference persistence still remain the fallback implementation until parity work lands
+- Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, and hide-on-close behavior
+- Electron-specific launch-on-startup, local desktop preference persistence, and some window-fit/snap behavior still remain the fallback implementation until parity work lands

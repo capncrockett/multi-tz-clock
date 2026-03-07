@@ -95,6 +95,8 @@ Shipped in this checkpoint:
 - Tauri v2 scaffold added in-repo under `src-tauri/`
 - Tauri dev/build scripts added without changing the browser app's source-of-truth role
 - Existing renderer contract extended so Tauri can load the same frontend as Electron/browser
+- Tauri tray host now supports show/hide window, show/hide UI mode, always-on-top toggle, quit, and hide-on-close behavior
+- Tauri desktop host now owns its current window preset and UI visibility state instead of relying on renderer-only sizing
 
 Selected target shell - Tauri:
 
@@ -105,8 +107,9 @@ Selected target shell - Tauri:
 
 Still pending in Phase 2:
 
-- Port the current Electron widget shell behavior to Tauri
-- Re-establish tray, startup, persistence, preset sizing, and packaging parity under Tauri
+- Re-establish launch-on-startup and local desktop preference persistence parity under Tauri
+- Restore preset snapping/work-area fitting parity under Tauri
+- Expand desktop-host test coverage beyond the browser-source-of-truth renderer path
 - Keep Electron as fallback until the Tauri host reaches parity and replaces it
 
 ---
