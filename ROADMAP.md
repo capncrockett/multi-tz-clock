@@ -98,6 +98,7 @@ Shipped in this checkpoint:
 - Tauri tray host now supports show/hide window, show/hide UI mode, always-on-top toggle, quit, and hide-on-close behavior
 - Tauri desktop host now owns its current window preset and UI visibility state instead of relying on renderer-only sizing
 - Tauri desktop host now persists its local host preferences to an app-config JSON file between launches
+- Tauri tray host now supports launch-on-startup toggling and applies the persisted startup preference on launch
 
 Selected target shell - Tauri:
 
@@ -108,7 +109,6 @@ Selected target shell - Tauri:
 
 Still pending in Phase 2:
 
-- Re-establish launch-on-startup and local desktop preference persistence parity under Tauri
 - Decide whether Tauri host preferences stay in Rust-owned JSON or move behind a shared desktop abstraction
 - Restore preset snapping/work-area fitting parity under Tauri
 - Expand desktop-host test coverage beyond the browser-source-of-truth renderer path

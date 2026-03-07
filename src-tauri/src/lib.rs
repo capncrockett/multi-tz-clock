@@ -6,10 +6,12 @@ use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, State, WebviewWindow, WindowEvent};
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartManagerExt};
 
 const MAIN_WINDOW_LABEL: &str = "main";
 const TOGGLE_UI_MENU_ID: &str = "toggle-ui-visibility";
 const TOGGLE_ALWAYS_ON_TOP_MENU_ID: &str = "toggle-always-on-top";
+const TOGGLE_LAUNCH_ON_STARTUP_MENU_ID: &str = "toggle-launch-on-startup";
 const QUIT_MENU_ID: &str = "quit";
 const DEFAULT_WINDOW_PRESET_ID: &str = "medium";
 const DESKTOP_PREFERENCES_FILE_NAME: &str = "desktop-preferences.json";
@@ -18,6 +20,7 @@ struct DesktopHostState {
     inner: Mutex<DesktopHostStateInner>,
     toggle_ui_item: MenuItem<tauri::Wry>,
     toggle_always_on_top_item: CheckMenuItem<tauri::Wry>,
+    toggle_launch_on_startup_item: CheckMenuItem<tauri::Wry>,
     preferences_path: Option<PathBuf>,
 }
 
@@ -37,6 +40,7 @@ struct DesktopHostStateInner {
     window_preset_id: String,
     is_ui_visible: bool,
     is_always_on_top: bool,
+    launch_on_startup: bool,
     is_quitting: bool,
 }
 
@@ -44,6 +48,7 @@ impl DesktopHostState {
     fn new(
         toggle_ui_item: MenuItem<tauri::Wry>,
         toggle_always_on_top_item: CheckMenuItem<tauri::Wry>,
+        toggle_launch_on_startup_item: CheckMenuItem<tauri::Wry>,
         preferences_path: Option<PathBuf>,
         preferences: PersistedDesktopPreferences,
     ) -> Self {
@@ -52,10 +57,12 @@ impl DesktopHostState {
                 window_preset_id: preferences.window_preset_id,
                 is_ui_visible: preferences.is_ui_visible,
                 is_always_on_top: preferences.is_always_on_top,
+                launch_on_startup: preferences.launch_on_startup,
                 is_quitting: false,
             }),
             toggle_ui_item,
             toggle_always_on_top_item,
+            toggle_launch_on_startup_item,
             preferences_path,
         }
     }
@@ -141,7 +148,7 @@ fn persist_desktop_preferences(
         window_preset_id: state.window_preset_id.clone(),
         is_ui_visible: state.is_ui_visible,
         is_always_on_top: state.is_always_on_top,
-        launch_on_startup: false,
+        launch_on_startup: state.launch_on_startup,
     })
     .map_err(|error| error.to_string())?;
     fs::write(preferences_path, format!("{serialized}\n")).map_err(|error| error.to_string())
@@ -156,6 +163,9 @@ fn sync_tray_menu(host_state: &DesktopHostState, state: &DesktopHostStateInner) 
     host_state
         .toggle_always_on_top_item
         .set_checked(state.is_always_on_top)?;
+    host_state
+        .toggle_launch_on_startup_item
+        .set_checked(state.launch_on_startup)?;
     Ok(())
 }
 
@@ -225,6 +235,25 @@ fn set_always_on_top_internal(
     Ok(state.is_always_on_top)
 }
 
+fn set_launch_on_startup_internal(
+    app: &AppHandle,
+    host_state: &DesktopHostState,
+    launch_on_startup: bool,
+) -> Result<bool, String> {
+    let autostart_manager = app.autolaunch();
+    if launch_on_startup {
+        autostart_manager.enable().map_err(|error| error.to_string())?;
+    } else {
+        autostart_manager.disable().map_err(|error| error.to_string())?;
+    }
+
+    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    state.launch_on_startup = launch_on_startup;
+    sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
+    persist_desktop_preferences(host_state, &state)?;
+    Ok(state.launch_on_startup)
+}
+
 fn toggle_window_visibility(app: &AppHandle) -> tauri::Result<()> {
     let window = get_main_window(app)?;
     if window.is_visible()? {
@@ -272,17 +301,32 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    let toggle_launch_on_startup_item = CheckMenuItem::with_id(
+        app,
+        TOGGLE_LAUNCH_ON_STARTUP_MENU_ID,
+        "Launch on Startup",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let quit_item = MenuItem::with_id(app, QUIT_MENU_ID, "Quit", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let tray_menu = Menu::with_items(
         app,
-        &[&toggle_ui_item, &toggle_always_on_top_item, &separator, &quit_item],
+        &[
+            &toggle_ui_item,
+            &toggle_always_on_top_item,
+            &toggle_launch_on_startup_item,
+            &separator,
+            &quit_item,
+        ],
     )?;
     let preferences_path = get_desktop_preferences_path(app);
     let preferences = read_desktop_preferences(preferences_path.as_deref());
     let host_state = DesktopHostState::new(
         toggle_ui_item.clone(),
         toggle_always_on_top_item.clone(),
+        toggle_launch_on_startup_item.clone(),
         preferences_path,
         preferences,
     );
@@ -322,6 +366,18 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
                         .map(|state| state.is_always_on_top)
                         .unwrap_or(true);
                     let _ = set_always_on_top_internal(app, &host_state, !current_always_on_top);
+                }
+                TOGGLE_LAUNCH_ON_STARTUP_MENU_ID => {
+                    let current_launch_on_startup = host_state
+                        .inner
+                        .lock()
+                        .map(|state| state.launch_on_startup)
+                        .unwrap_or(false);
+                    let _ = set_launch_on_startup_internal(
+                        app,
+                        &host_state,
+                        !current_launch_on_startup,
+                    );
                 }
                 QUIT_MENU_ID => {
                     if let Ok(mut state) = host_state.inner.lock() {
@@ -380,6 +436,10 @@ fn desktop_set_ui_visibility(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
             create_tray(&app.handle())?;
             wire_close_behavior(&app.handle())?;
@@ -389,6 +449,12 @@ pub fn run() {
                 .inner
                 .lock()
                 .map_err(|_| tauri::Error::AssetNotFound("desktop-state".into()))?;
+            let autostart_manager = app.autolaunch();
+            if state.launch_on_startup {
+                let _ = autostart_manager.enable();
+            } else {
+                let _ = autostart_manager.disable();
+            }
             apply_host_state(&app.handle(), &state, false, false)?;
 
             Ok(())
