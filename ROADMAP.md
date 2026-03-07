@@ -99,6 +99,7 @@ Shipped in this checkpoint:
 - Tauri desktop host now owns its current window preset and UI visibility state instead of relying on renderer-only sizing
 - Tauri desktop host now persists its local host preferences to an app-config JSON file between launches
 - Tauri tray host now supports launch-on-startup toggling and applies the persisted startup preference on launch
+- Tauri host now snaps resized windows back to the nearest preset and re-fits full-UI bounds inside the monitor work area
 
 Selected target shell - Tauri:
 
@@ -110,7 +111,6 @@ Selected target shell - Tauri:
 Still pending in Phase 2:
 
 - Decide whether Tauri host preferences stay in Rust-owned JSON or move behind a shared desktop abstraction
-- Restore preset snapping/work-area fitting parity under Tauri
 - Expand desktop-host test coverage beyond the browser-source-of-truth renderer path
 - Keep Electron as fallback until the Tauri host reaches parity and replaces it
 

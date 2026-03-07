@@ -240,6 +240,6 @@ What is platform-specific:
 Current Tauri spike boundary:
 
 - Browser HTML/CSS/JS remains canonical and is loaded directly by Tauri
-- Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, launch-on-startup, hide-on-close behavior, and local host preference persistence
+- Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, launch-on-startup, hide-on-close behavior, local host preference persistence, and preset snap/work-area fitting behavior
 - Tauri host preferences currently live in a JSON file under the app config directory, separate from browser `localStorage` / IndexedDB state
-- Electron-specific window-fit/snap behavior still remains the fallback implementation until parity work lands
+- The main remaining Tauri parity work is broader desktop-host verification and any final cleanup needed before Electron removal
