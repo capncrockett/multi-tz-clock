@@ -1,5 +1,8 @@
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, State, WebviewWindow, WindowEvent};
@@ -9,11 +12,25 @@ const TOGGLE_UI_MENU_ID: &str = "toggle-ui-visibility";
 const TOGGLE_ALWAYS_ON_TOP_MENU_ID: &str = "toggle-always-on-top";
 const QUIT_MENU_ID: &str = "quit";
 const DEFAULT_WINDOW_PRESET_ID: &str = "medium";
+const DESKTOP_PREFERENCES_FILE_NAME: &str = "desktop-preferences.json";
 
 struct DesktopHostState {
     inner: Mutex<DesktopHostStateInner>,
     toggle_ui_item: MenuItem<tauri::Wry>,
     toggle_always_on_top_item: CheckMenuItem<tauri::Wry>,
+    preferences_path: Option<PathBuf>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct PersistedDesktopPreferences {
+    #[serde(rename = "windowPresetId")]
+    window_preset_id: String,
+    #[serde(rename = "isUiVisible")]
+    is_ui_visible: bool,
+    #[serde(rename = "isAlwaysOnTop")]
+    is_always_on_top: bool,
+    #[serde(rename = "launchOnStartup")]
+    launch_on_startup: bool,
 }
 
 struct DesktopHostStateInner {
@@ -27,16 +44,39 @@ impl DesktopHostState {
     fn new(
         toggle_ui_item: MenuItem<tauri::Wry>,
         toggle_always_on_top_item: CheckMenuItem<tauri::Wry>,
+        preferences_path: Option<PathBuf>,
+        preferences: PersistedDesktopPreferences,
     ) -> Self {
         Self {
             inner: Mutex::new(DesktopHostStateInner {
-                window_preset_id: DEFAULT_WINDOW_PRESET_ID.to_string(),
-                is_ui_visible: false,
-                is_always_on_top: true,
+                window_preset_id: preferences.window_preset_id,
+                is_ui_visible: preferences.is_ui_visible,
+                is_always_on_top: preferences.is_always_on_top,
                 is_quitting: false,
             }),
             toggle_ui_item,
             toggle_always_on_top_item,
+            preferences_path,
+        }
+    }
+}
+
+impl PersistedDesktopPreferences {
+    fn defaults() -> Self {
+        Self {
+            window_preset_id: DEFAULT_WINDOW_PRESET_ID.to_string(),
+            is_ui_visible: false,
+            is_always_on_top: true,
+            launch_on_startup: false,
+        }
+    }
+
+    fn normalized(self) -> Self {
+        Self {
+            window_preset_id: normalize_preset_id(&self.window_preset_id).to_string(),
+            is_ui_visible: self.is_ui_visible,
+            is_always_on_top: self.is_always_on_top,
+            launch_on_startup: self.launch_on_startup,
         }
     }
 }
@@ -64,6 +104,47 @@ fn get_preset_bounds(preset_id: &str, is_ui_visible: bool) -> (f64, f64) {
 fn get_main_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     app.get_webview_window(MAIN_WINDOW_LABEL)
         .ok_or_else(|| tauri::Error::AssetNotFound(MAIN_WINDOW_LABEL.into()))
+}
+
+fn get_desktop_preferences_path(app: &AppHandle) -> Option<PathBuf> {
+    let app_config_dir = app.path().app_config_dir().ok()?;
+    Some(app_config_dir.join(DESKTOP_PREFERENCES_FILE_NAME))
+}
+
+fn read_desktop_preferences(preferences_path: Option<&Path>) -> PersistedDesktopPreferences {
+    let Some(preferences_path) = preferences_path else {
+        return PersistedDesktopPreferences::defaults();
+    };
+
+    let Ok(raw_value) = fs::read_to_string(preferences_path) else {
+        return PersistedDesktopPreferences::defaults();
+    };
+
+    serde_json::from_str::<PersistedDesktopPreferences>(&raw_value)
+        .map(PersistedDesktopPreferences::normalized)
+        .unwrap_or_else(|_| PersistedDesktopPreferences::defaults())
+}
+
+fn persist_desktop_preferences(
+    host_state: &DesktopHostState,
+    state: &DesktopHostStateInner,
+) -> Result<(), String> {
+    let Some(preferences_path) = &host_state.preferences_path else {
+        return Ok(());
+    };
+
+    if let Some(parent_dir) = preferences_path.parent() {
+        fs::create_dir_all(parent_dir).map_err(|error| error.to_string())?;
+    }
+
+    let serialized = serde_json::to_string_pretty(&PersistedDesktopPreferences {
+        window_preset_id: state.window_preset_id.clone(),
+        is_ui_visible: state.is_ui_visible,
+        is_always_on_top: state.is_always_on_top,
+        launch_on_startup: false,
+    })
+    .map_err(|error| error.to_string())?;
+    fs::write(preferences_path, format!("{serialized}\n")).map_err(|error| error.to_string())
 }
 
 fn sync_tray_menu(host_state: &DesktopHostState, state: &DesktopHostStateInner) -> tauri::Result<()> {
@@ -113,6 +194,7 @@ fn set_window_size_preset_internal(
     state.window_preset_id = normalize_preset_id(preset_id).to_string();
     apply_host_state(app, &state, false, emit_window_preset).map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
+    persist_desktop_preferences(host_state, &state)?;
     Ok(state.window_preset_id.clone())
 }
 
@@ -126,6 +208,7 @@ fn set_ui_visibility_internal(
     state.is_ui_visible = is_visible;
     apply_host_state(app, &state, emit_ui_visibility, false).map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
+    persist_desktop_preferences(host_state, &state)?;
     Ok(state.is_ui_visible)
 }
 
@@ -138,6 +221,7 @@ fn set_always_on_top_internal(
     state.is_always_on_top = is_always_on_top;
     apply_host_state(app, &state, false, false).map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
+    persist_desktop_preferences(host_state, &state)?;
     Ok(state.is_always_on_top)
 }
 
@@ -194,7 +278,14 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         app,
         &[&toggle_ui_item, &toggle_always_on_top_item, &separator, &quit_item],
     )?;
-    let host_state = DesktopHostState::new(toggle_ui_item.clone(), toggle_always_on_top_item.clone());
+    let preferences_path = get_desktop_preferences_path(app);
+    let preferences = read_desktop_preferences(preferences_path.as_deref());
+    let host_state = DesktopHostState::new(
+        toggle_ui_item.clone(),
+        toggle_always_on_top_item.clone(),
+        preferences_path,
+        preferences,
+    );
 
     {
         let state = host_state
@@ -310,4 +401,78 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{read_desktop_preferences, PersistedDesktopPreferences};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn create_temp_preferences_path(name: &str) -> PathBuf {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir()
+            .join("multi-tz-clock-tests")
+            .join(format!("{name}-{unique_suffix}.json"))
+    }
+
+    #[test]
+    fn defaults_are_used_when_preferences_file_is_missing() {
+        let preferences = read_desktop_preferences(None);
+
+        assert_eq!(preferences.window_preset_id, "medium");
+        assert!(!preferences.is_ui_visible);
+        assert!(preferences.is_always_on_top);
+        assert!(!preferences.launch_on_startup);
+    }
+
+    #[test]
+    fn stored_preferences_are_normalized_on_read() {
+        let preferences_path = create_temp_preferences_path("desktop-preferences");
+        fs::create_dir_all(
+            preferences_path
+                .parent()
+                .expect("temp preferences path should have a parent"),
+        )
+        .expect("temp preferences directory should be created");
+        fs::write(
+            &preferences_path,
+            r#"{
+  "windowPresetId": "unknown",
+  "isUiVisible": true,
+  "isAlwaysOnTop": false,
+  "launchOnStartup": true
+}
+"#,
+        )
+        .expect("temp preferences file should be written");
+
+        let preferences = read_desktop_preferences(Some(&preferences_path));
+
+        assert_eq!(preferences.window_preset_id, "medium");
+        assert!(preferences.is_ui_visible);
+        assert!(!preferences.is_always_on_top);
+        assert!(preferences.launch_on_startup);
+
+        let _ = fs::remove_file(preferences_path);
+    }
+
+    #[test]
+    fn preference_normalization_keeps_supported_presets() {
+        let preferences = PersistedDesktopPreferences {
+            window_preset_id: "small".into(),
+            is_ui_visible: true,
+            is_always_on_top: false,
+            launch_on_startup: false,
+        }
+        .normalized();
+
+        assert_eq!(preferences.window_preset_id, "small");
+        assert!(preferences.is_ui_visible);
+        assert!(!preferences.is_always_on_top);
+    }
 }
