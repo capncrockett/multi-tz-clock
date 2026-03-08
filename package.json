@@ -17,6 +17,7 @@
     "test:node": "jest --config jest.config.cjs --runInBand",
     "test:unit": "jest --config jest.config.cjs tests/unit --runInBand",
     "test:integration": "jest --config jest.config.cjs tests/integration --runInBand",
+    "test:tauri": "cargo test --manifest-path src-tauri\\Cargo.toml",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --grep desktop",
     "test:e2e:headed": "playwright test --headed",

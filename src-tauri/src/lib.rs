@@ -654,8 +654,9 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_bounds_within_area, get_closest_window_preset_id, get_window_preset,
-        read_desktop_preferences, PersistedDesktopPreferences, WINDOW_SIZE_PRESETS,
+        fit_bounds_within_area, get_closest_window_preset_id, get_preset_bounds,
+        get_window_preset, normalize_preset_id, read_desktop_preferences,
+        PersistedDesktopPreferences, WINDOW_SIZE_PRESETS,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -714,6 +715,28 @@ mod tests {
     }
 
     #[test]
+    fn malformed_preferences_fall_back_to_defaults() {
+        let preferences_path = create_temp_preferences_path("desktop-preferences-invalid");
+        fs::create_dir_all(
+            preferences_path
+                .parent()
+                .expect("temp preferences path should have a parent"),
+        )
+        .expect("temp preferences directory should be created");
+        fs::write(&preferences_path, "{ not valid json")
+            .expect("temp preferences file should be written");
+
+        let preferences = read_desktop_preferences(Some(&preferences_path));
+
+        assert_eq!(preferences.window_preset_id, "medium");
+        assert!(!preferences.is_ui_visible);
+        assert!(preferences.is_always_on_top);
+        assert!(!preferences.launch_on_startup);
+
+        let _ = fs::remove_file(preferences_path);
+    }
+
+    #[test]
     fn preference_normalization_keeps_supported_presets() {
         let preferences = PersistedDesktopPreferences {
             window_preset_id: "small".into(),
@@ -735,6 +758,14 @@ mod tests {
         assert_eq!(get_window_preset("medium").full_height, 560);
         assert_eq!(get_window_preset("xsmall").clock_only_height, 232);
         assert_eq!(get_window_preset("small").label, "Small");
+    }
+
+    #[test]
+    fn preset_lookup_and_bounds_fall_back_to_medium_defaults() {
+        assert_eq!(normalize_preset_id("unknown"), "medium");
+        assert_eq!(get_window_preset("unknown").id, "medium");
+        assert_eq!(get_preset_bounds("unknown", true), (420.0, 560.0));
+        assert_eq!(get_preset_bounds("unknown", false), (420.0, 372.0));
     }
 
     #[test]
@@ -771,6 +802,23 @@ mod tests {
                 }
             ),
             Some(PhysicalPosition::new(1500, 480))
+        );
+    }
+
+    #[test]
+    fn work_area_fit_pins_oversized_windows_to_the_work_area_origin() {
+        let work_area = PhysicalRect {
+            position: PhysicalPosition::new(100, 50),
+            size: PhysicalSize::new(320, 240),
+        };
+
+        assert_eq!(
+            fit_bounds_within_area(
+                PhysicalPosition::new(500, 500),
+                PhysicalSize::new(420, 560),
+                work_area
+            ),
+            Some(PhysicalPosition::new(100, 50))
         );
     }
 }

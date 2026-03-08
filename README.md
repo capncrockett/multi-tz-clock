@@ -63,10 +63,22 @@ Run only integration tests:
 npm run test:integration
 ```
 
+Run the Tauri host unit tests:
+
+```bash
+npm run test:tauri
+```
+
 Run the end-to-end smoke suite (Playwright):
 
 ```bash
 npm run test:e2e
+```
+
+Run only the desktop-focused Playwright coverage:
+
+```bash
+npm run test:e2e:desktop
 ```
 
 Run all suites:

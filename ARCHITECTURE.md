@@ -167,8 +167,10 @@ Contains pure functions used by both browser runtime and Jest tests:
 - sub-hour timezone dedupe precision
 - compact sizing at small viewport
 - dynamic tier transitions (`small` -> `xsmall`)
+- desktop-shell contract flows for preset changes and UI visibility
 - key accessibility hooks (`skip-link`, toolbar/list roles, live region)
 - Run with: `npm run test:e2e`.
+- Desktop-focused slice: `npm run test:e2e:desktop`.
 
 ## Automated Node Testing
 
@@ -179,6 +181,16 @@ Contains pure functions used by both browser runtime and Jest tests:
 - `npm run test:unit`
 - `npm run test:integration`
 - `npm run test:node`
+
+## Automated Tauri Host Testing
+
+- Framework: Rust unit tests via `cargo test`.
+- Current host coverage:
+- desktop preference defaults and normalization
+- shared preset loading and fallback bounds
+- nearest-preset snap rules
+- work-area fitting, including oversized-window edge cases
+- Run with: `npm run test:tauri`.
 
 ## Rendering Pipeline (Per Frame)
 
