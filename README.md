@@ -75,6 +75,12 @@ Run the static dev-host reliability tests:
 npm run test:dev-host
 ```
 
+Run the desktop migration verification stack:
+
+```bash
+npm run test:desktop
+```
+
 Run the end-to-end smoke suite (Playwright):
 
 ```bash

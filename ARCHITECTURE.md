@@ -181,6 +181,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - `npm run test:unit`
 - `npm run test:integration`
 - `npm run test:node`
+- Combined desktop stack: `npm run test:desktop`
 - Static dev-host slice: `npm run test:dev-host`
 
 ## Automated Tauri Host Testing
