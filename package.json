@@ -18,6 +18,7 @@
     "test:unit": "jest --config jest.config.cjs tests/unit --runInBand",
     "test:integration": "jest --config jest.config.cjs tests/integration --runInBand",
     "test:e2e": "playwright test",
+    "test:e2e:desktop": "playwright test --grep desktop",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",

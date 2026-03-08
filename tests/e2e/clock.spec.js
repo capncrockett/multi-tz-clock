@@ -85,6 +85,10 @@ async function mockDesktopShell(page, options = {}) {
   }, { initialPreset, initialUiVisible });
 }
 
+async function getClockCssWidth(page) {
+  return page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
+}
+
 test('loads and initializes without runtime errors', async ({ page }) => {
   const runtimeErrors = [];
   page.on('pageerror', (err) => runtimeErrors.push(err.message));
@@ -303,13 +307,13 @@ test('small and xsmall viewport tiers update dynamically', async ({ page }) => {
   await expect(debugMain).toContainText('tier: xsmall');
 });
 
-test('desktop hide ui mode leaves only the clock face visible', async ({ page }) => {
+test('[desktop] hide ui mode leaves only the clock face visible', async ({ page }) => {
   await mockDesktopShell(page, { initialUiVisible: true });
   await page.setViewportSize({ width: 420, height: 560 });
   await gotoApp(page);
 
   await expect(page.locator('#desktopSizeLabel')).toBeVisible();
-  const beforeWidth = await page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
+  const beforeWidth = await getClockCssWidth(page);
 
   await page.evaluate(() => {
     window.__desktopShellTest.emitUiVisibility(false);
@@ -321,11 +325,11 @@ test('desktop hide ui mode leaves only the clock face visible', async ({ page })
   await expect(page.locator('#debug-controls')).toBeHidden();
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('clock-only');
 
-  const afterWidth = await page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'));
+  const afterWidth = await getClockCssWidth(page);
   expect(afterWidth).toBe(beforeWidth);
 });
 
-test('desktop xsmall mode fits the full ui without scrolling', async ({ page }) => {
+test('[desktop] xsmall mode fits the full ui without scrolling', async ({ page }) => {
   await mockDesktopShell(page, { initialPreset: 'xsmall', initialUiVisible: true });
   await page.setViewportSize({ width: 232, height: 580 });
   await gotoApp(page);
@@ -345,19 +349,71 @@ test('desktop xsmall mode fits the full ui without scrolling', async ({ page }) 
   expect(metrics.canvasWidth).toBe(200);
 });
 
-test('desktop preset changes resize the clock immediately', async ({ page }) => {
+test('[desktop] preset changes resize the clock immediately', async ({ page }) => {
   await mockDesktopShell(page, { initialPreset: 'medium', initialUiVisible: true });
   await page.setViewportSize({ width: 420, height: 560 });
   await gotoApp(page);
 
   await expect(page.locator('#desktopWindowSize')).toHaveValue('medium');
-  await expect.poll(() => page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'))).toBe(340);
+  await expect.poll(() => getClockCssWidth(page)).toBe(340);
 
   await page.locator('#desktopWindowSize').selectOption('xsmall');
 
   await expect(page.locator('#desktopWindowSize')).toHaveValue('xsmall');
-  await expect.poll(() => page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'))).toBe(200);
+  await expect.poll(() => getClockCssWidth(page)).toBe(200);
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopSize)).toBe('xsmall');
+});
+
+test('[desktop] host preset events keep the renderer in sync', async ({ page }) => {
+  await mockDesktopShell(page, { initialPreset: 'medium', initialUiVisible: true });
+  await page.setViewportSize({ width: 420, height: 560 });
+  await gotoApp(page);
+
+  await expect(page.locator('#desktopWindowSize')).toHaveValue('medium');
+  await expect.poll(() => getClockCssWidth(page)).toBe(340);
+
+  await page.evaluate(() => {
+    window.__desktopShellTest.emitPreset('small');
+  });
+
+  await expect(page.locator('#desktopWindowSize')).toHaveValue('small');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopSize)).toBe('small');
+  await expect.poll(() => getClockCssWidth(page)).toBe(280);
+
+  await page.evaluate(() => {
+    window.__desktopShellTest.emitPreset('xsmall');
+  });
+
+  await expect(page.locator('#desktopWindowSize')).toHaveValue('xsmall');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopSize)).toBe('xsmall');
+  await expect.poll(() => getClockCssWidth(page)).toBe(200);
+});
+
+test('[desktop] host ui visibility events round-trip the full widget layout', async ({ page }) => {
+  await mockDesktopShell(page, { initialPreset: 'medium', initialUiVisible: true });
+  await page.setViewportSize({ width: 420, height: 560 });
+  await gotoApp(page);
+
+  await expect(page.locator('#controls')).toBeVisible();
+  await expect(page.locator('#zone-bar')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('full');
+
+  await page.evaluate(() => {
+    window.__desktopShellTest.emitUiVisibility(false);
+  });
+
+  await expect(page.locator('#controls')).toBeHidden();
+  await expect(page.locator('#zone-bar')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('clock-only');
+
+  await page.evaluate(() => {
+    window.__desktopShellTest.emitUiVisibility(true);
+  });
+
+  await expect(page.locator('#controls')).toBeVisible();
+  await expect(page.locator('#zone-bar')).toBeVisible();
+  await expect(page.locator('#desktopSizeLabel')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopUi)).toBe('full');
 });
 
 test('accessibility hooks are present', async ({ page }) => {

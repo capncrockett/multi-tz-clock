@@ -111,7 +111,7 @@ Selected target shell - Tauri:
 Still pending in Phase 2:
 
 - Decide whether Tauri host preferences stay in Rust-owned JSON or move behind a shared desktop abstraction
-- Expand desktop-host test coverage beyond the browser-source-of-truth renderer path
+- Prioritize directed desktop-host test coverage beyond the browser-source-of-truth renderer path, starting with mocked desktop-shell E2E flows and Rust host tests before further host cleanup
 - Keep Electron as fallback until the Tauri host reaches parity and replaces it
 
 ---
