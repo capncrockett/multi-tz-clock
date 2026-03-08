@@ -437,10 +437,17 @@ async function initializeDesktopWindowControls() {
 
   sizeSelect.addEventListener('change', async () => {
     if (typeof desktopShell.setWindowSizePreset !== 'function') return;
+    const requestedPresetId = sizeSelect.value;
+    syncValue(requestedPresetId);
     try {
-      syncValue(await desktopShell.setWindowSizePreset(sizeSelect.value));
+      syncValue(await desktopShell.setWindowSizePreset(requestedPresetId));
     } catch {
-      // Ignore shell resize failures so the browser app keeps running.
+      if (typeof desktopShell.getWindowSizePreset !== 'function') return;
+      try {
+        syncValue(await desktopShell.getWindowSizePreset());
+      } catch {
+        // Ignore shell resize failures so the browser app keeps running.
+      }
     }
   });
 

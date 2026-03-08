@@ -69,6 +69,10 @@ async function mockDesktopShell(page, options = {}) {
     };
 
     globalThis.__desktopShellTest = {
+      emitPreset(nextPreset) {
+        preset = nextPreset;
+        for (const listener of presetListeners) listener(preset);
+      },
       emitUiVisibility(nextVisible) {
         uiVisible = !!nextVisible;
         for (const listener of uiListeners) listener(uiVisible);
@@ -339,6 +343,21 @@ test('desktop xsmall mode fits the full ui without scrolling', async ({ page }) 
   expect(metrics.scrollHeight).toBe(metrics.clientHeight);
   expect(metrics.bodyScrollHeight).toBeLessThanOrEqual(metrics.bodyClientHeight);
   expect(metrics.canvasWidth).toBe(200);
+});
+
+test('desktop preset changes resize the clock immediately', async ({ page }) => {
+  await mockDesktopShell(page, { initialPreset: 'medium', initialUiVisible: true });
+  await page.setViewportSize({ width: 420, height: 560 });
+  await gotoApp(page);
+
+  await expect(page.locator('#desktopWindowSize')).toHaveValue('medium');
+  await expect.poll(() => page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'))).toBe(340);
+
+  await page.locator('#desktopWindowSize').selectOption('xsmall');
+
+  await expect(page.locator('#desktopWindowSize')).toHaveValue('xsmall');
+  await expect.poll(() => page.evaluate(() => parseFloat(document.getElementById('clock').style.width || '0'))).toBe(200);
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.desktopSize)).toBe('xsmall');
 });
 
 test('accessibility hooks are present', async ({ page }) => {
