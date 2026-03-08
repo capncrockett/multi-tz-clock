@@ -2,9 +2,9 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const repoRoot = path.resolve(__dirname, "..");
-const host = process.env.STATIC_HOST || "127.0.0.1";
-const port = Number(process.env.STATIC_PORT || 4173);
+const DEFAULT_REPO_ROOT = path.resolve(__dirname, "..");
+const DEFAULT_HOST = process.env.STATIC_HOST || "127.0.0.1";
+const DEFAULT_PORT = Number(process.env.STATIC_PORT || 4173);
 
 const MIME_TYPES = Object.freeze({
   ".css": "text/css; charset=utf-8",
@@ -18,7 +18,7 @@ const MIME_TYPES = Object.freeze({
   ".txt": "text/plain; charset=utf-8"
 });
 
-function getRequestPath(urlValue) {
+function getRequestPath(urlValue, { repoRoot, host, port }) {
   const url = new URL(urlValue || "/", `http://${host}:${port}`);
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === "/") {
@@ -47,30 +47,82 @@ function sendFile(response, filePath) {
   });
 }
 
-const server = http.createServer((request, response) => {
-  const filePath = getRequestPath(request.url);
-  if (!filePath.startsWith(repoRoot)) {
-    response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Forbidden");
-    return;
-  }
-
-  fs.stat(filePath, (error, stats) => {
-    if (error) {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Not found");
+function createStaticServer({
+  repoRoot = DEFAULT_REPO_ROOT,
+  host = DEFAULT_HOST,
+  port = DEFAULT_PORT
+} = {}) {
+  const server = http.createServer((request, response) => {
+    const filePath = getRequestPath(request.url, { repoRoot, host, port });
+    if (!filePath.startsWith(repoRoot)) {
+      response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Forbidden");
       return;
     }
 
-    if (stats.isDirectory()) {
-      sendFile(response, path.join(filePath, "index.html"));
-      return;
-    }
+    fs.stat(filePath, (error, stats) => {
+      if (error) {
+        response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        response.end("Not found");
+        return;
+      }
 
-    sendFile(response, filePath);
+      if (stats.isDirectory()) {
+        sendFile(response, path.join(filePath, "index.html"));
+        return;
+      }
+
+      sendFile(response, filePath);
+    });
   });
-});
 
-server.listen(port, host, () => {
-  console.log(`Serving ${repoRoot} at http://${host}:${port}`);
-});
+  return { server, repoRoot, host, port };
+}
+
+function createPortInUseError({ host, port }) {
+  return new Error(
+    `Static dev server could not listen on http://${host}:${port} because the port is already in use. `
+    + "Stop the stale process or set STATIC_PORT to a free port."
+  );
+}
+
+function startStaticServer(options = {}) {
+  const context = createStaticServer(options);
+
+  return new Promise((resolve, reject) => {
+    context.server.once("error", (error) => {
+      if (error && error.code === "EADDRINUSE") {
+        reject(createPortInUseError(context));
+        return;
+      }
+
+      reject(error);
+    });
+
+    context.server.listen(context.port, context.host, () => {
+      resolve(context);
+    });
+  });
+}
+
+async function main() {
+  try {
+    const { repoRoot, host, port } = await startStaticServer();
+    console.log(`Serving ${repoRoot} at http://${host}:${port}`);
+  } catch (error) {
+    console.error(error.message || error);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  void main();
+}
+
+module.exports = {
+  MIME_TYPES,
+  createStaticServer,
+  createPortInUseError,
+  getRequestPath,
+  startStaticServer
+};

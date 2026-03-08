@@ -181,6 +181,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - `npm run test:unit`
 - `npm run test:integration`
 - `npm run test:node`
+- Static dev-host slice: `npm run test:dev-host`
 
 ## Automated Tauri Host Testing
 
@@ -191,6 +192,16 @@ Contains pure functions used by both browser runtime and Jest tests:
 - nearest-preset snap rules
 - work-area fitting, including oversized-window edge cases
 - Run with: `npm run test:tauri`.
+
+## Automated Dev-Host Testing
+
+- Framework: Jest against `scripts/serve-static.cjs`.
+- Current coverage:
+- root request resolution to `index.html`
+- static file serving and MIME selection
+- traversal rejection outside the repo root
+- clear failure when the dev port is already in use
+- Run with: `npm run test:dev-host`.
 
 ## Rendering Pipeline (Per Frame)
 

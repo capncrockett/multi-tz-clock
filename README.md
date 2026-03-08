@@ -69,6 +69,12 @@ Run the Tauri host unit tests:
 npm run test:tauri
 ```
 
+Run the static dev-host reliability tests:
+
+```bash
+npm run test:dev-host
+```
+
 Run the end-to-end smoke suite (Playwright):
 
 ```bash

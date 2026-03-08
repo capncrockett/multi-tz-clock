@@ -6,6 +6,14 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.scripts["desktop:dist"]).toBe("node scripts/build-electron.cjs dist");
   });
 
+  test("exposes explicit desktop-host test scripts", () => {
+    expect(packageJson.scripts["test:tauri"]).toBe("cargo test --manifest-path src-tauri\\Cargo.toml");
+    expect(packageJson.scripts["test:dev-host"]).toBe(
+      "jest --config jest.config.cjs tests/unit/serve-static.jest.test.js --runInBand"
+    );
+    expect(packageJson.scripts["test:e2e:desktop"]).toBe("playwright test --grep desktop");
+  });
+
   test("defines a Windows installer build for the desktop app", () => {
     expect(packageJson.productName).toBe("Multi-TZ Clock");
     expect(packageJson.build).toMatchObject({
