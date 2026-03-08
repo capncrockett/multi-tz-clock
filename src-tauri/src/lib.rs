@@ -7,7 +7,10 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalRect, PhysicalSize, State, WebviewWindow, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalRect, PhysicalSize, State,
+    WebviewWindow, WindowEvent,
+};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as AutostartManagerExt};
 
 const MAIN_WINDOW_LABEL: &str = "main";
@@ -152,7 +155,8 @@ fn get_closest_window_preset_id(width: u32, height: u32, is_ui_visible: bool) ->
 
     for preset in WINDOW_SIZE_PRESETS.iter() {
         let (preset_width, preset_height) = get_preset_bounds(&preset.id, is_ui_visible);
-        let next_delta = ((preset_width - safe_width).powi(2) + (preset_height - safe_height).powi(2)).sqrt();
+        let next_delta =
+            ((preset_width - safe_width).powi(2) + (preset_height - safe_height).powi(2)).sqrt();
         if next_delta < best_delta {
             best_delta = next_delta;
             best_preset_id = normalize_preset_id(&preset.id);
@@ -222,7 +226,10 @@ fn persist_desktop_preferences(
     fs::write(preferences_path, format!("{serialized}\n")).map_err(|error| error.to_string())
 }
 
-fn sync_tray_menu(host_state: &DesktopHostState, state: &DesktopHostStateInner) -> tauri::Result<()> {
+fn sync_tray_menu(
+    host_state: &DesktopHostState,
+    state: &DesktopHostStateInner,
+) -> tauri::Result<()> {
     host_state.toggle_ui_item.set_text(if state.is_ui_visible {
         "Hide UI"
     } else {
@@ -273,9 +280,13 @@ fn set_window_size_preset_internal(
     preset_id: &str,
     emit_window_preset: bool,
 ) -> Result<String, String> {
-    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let mut state = host_state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     state.window_preset_id = normalize_preset_id(preset_id).to_string();
-    apply_host_state(app, &mut state, false, emit_window_preset).map_err(|error| error.to_string())?;
+    apply_host_state(app, &mut state, false, emit_window_preset)
+        .map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
     persist_desktop_preferences(host_state, &state)?;
     Ok(state.window_preset_id.clone())
@@ -287,9 +298,13 @@ fn set_ui_visibility_internal(
     is_visible: bool,
     emit_ui_visibility: bool,
 ) -> Result<bool, String> {
-    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let mut state = host_state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     state.is_ui_visible = is_visible;
-    apply_host_state(app, &mut state, emit_ui_visibility, false).map_err(|error| error.to_string())?;
+    apply_host_state(app, &mut state, emit_ui_visibility, false)
+        .map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
     persist_desktop_preferences(host_state, &state)?;
     Ok(state.is_ui_visible)
@@ -300,7 +315,10 @@ fn set_always_on_top_internal(
     host_state: &DesktopHostState,
     is_always_on_top: bool,
 ) -> Result<bool, String> {
-    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let mut state = host_state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     state.is_always_on_top = is_always_on_top;
     apply_host_state(app, &mut state, false, false).map_err(|error| error.to_string())?;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
@@ -315,12 +333,19 @@ fn set_launch_on_startup_internal(
 ) -> Result<bool, String> {
     let autostart_manager = app.autolaunch();
     if launch_on_startup {
-        autostart_manager.enable().map_err(|error| error.to_string())?;
+        autostart_manager
+            .enable()
+            .map_err(|error| error.to_string())?;
     } else {
-        autostart_manager.disable().map_err(|error| error.to_string())?;
+        autostart_manager
+            .disable()
+            .map_err(|error| error.to_string())?;
     }
 
-    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let mut state = host_state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     state.launch_on_startup = launch_on_startup;
     sync_tray_menu(host_state, &state).map_err(|error| error.to_string())?;
     persist_desktop_preferences(host_state, &state)?;
@@ -361,10 +386,15 @@ fn snap_window_to_nearest_preset(app: &AppHandle) -> Result<(), String> {
     let window = get_main_window(app).map_err(|error| error.to_string())?;
     let size = window.outer_size().map_err(|error| error.to_string())?;
     let host_state = app.state::<DesktopHostState>();
-    let mut state = host_state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
-    let nearest_preset_id = get_closest_window_preset_id(size.width, size.height, state.is_ui_visible);
+    let mut state = host_state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
+    let nearest_preset_id =
+        get_closest_window_preset_id(size.width, size.height, state.is_ui_visible);
     let (preset_width, preset_height) = get_preset_bounds(nearest_preset_id, state.is_ui_visible);
-    let already_at_preset_size = size.width == preset_width as u32 && size.height == preset_height as u32;
+    let already_at_preset_size =
+        size.width == preset_width as u32 && size.height == preset_height as u32;
     if state.window_preset_id == nearest_preset_id && already_at_preset_size {
         return Ok(());
     }
@@ -378,15 +408,18 @@ fn snap_window_to_nearest_preset(app: &AppHandle) -> Result<(), String> {
 
 fn schedule_window_preset_snap(app: &AppHandle) {
     let host_state = app.state::<DesktopHostState>();
-    let generation = {
-        let Ok(mut state) = host_state.inner.lock() else {
-            return;
-        };
-        if state.is_applying_window_bounds {
-            return;
+    let generation = match host_state.inner.try_lock() {
+        // Window resize events can arrive synchronously while we are already
+        // applying host-managed bounds. Skip those events instead of blocking
+        // on the same mutex from the same UI thread.
+        Ok(mut state) => {
+            if state.is_applying_window_bounds {
+                return;
+            }
+            state.resize_snap_generation += 1;
+            state.resize_snap_generation
         }
-        state.resize_snap_generation += 1;
-        state.resize_snap_generation
+        Err(_) => return,
     };
 
     let app_handle = app.clone();
@@ -395,7 +428,7 @@ fn schedule_window_preset_snap(app: &AppHandle) {
         let host_state = app_handle.state::<DesktopHostState>();
         let should_snap = host_state
             .inner
-            .lock()
+            .try_lock()
             .map(|state| {
                 !state.is_applying_window_bounds && state.resize_snap_generation == generation
             })
@@ -548,7 +581,10 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
 
 #[tauri::command]
 fn desktop_get_window_size_preset(state: State<DesktopHostState>) -> Result<String, String> {
-    let state = state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let state = state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     Ok(state.window_preset_id.clone())
 }
 
@@ -563,7 +599,10 @@ fn desktop_set_window_size_preset(
 
 #[tauri::command]
 fn desktop_get_ui_visibility(state: State<DesktopHostState>) -> Result<bool, String> {
-    let state = state.inner.lock().map_err(|_| "desktop state lock poisoned")?;
+    let state = state
+        .inner
+        .lock()
+        .map_err(|_| "desktop state lock poisoned")?;
     Ok(state.is_ui_visible)
 }
 
