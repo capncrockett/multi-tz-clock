@@ -7,6 +7,9 @@ const tauriConfig = JSON.parse(
 );
 const cargoToml = fs.readFileSync(path.join(__dirname, "..", "..", "src-tauri", "Cargo.toml"), "utf8");
 const cargoVersionMatch = cargoToml.match(/^version = "([^"]+)"$/m);
+const packageLock = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "..", "package-lock.json"), "utf8")
+);
 
 describe("package.json desktop packaging config", () => {
   test("exposes Tauri-first desktop scripts", () => {
@@ -45,5 +48,15 @@ describe("package.json desktop packaging config", () => {
     expect(cargoVersionMatch[1]).toBe(packageJson.version);
     expect(tauriConfig.identifier).toBe("com.capnc.multi-tz-clock");
     expect(tauriConfig.bundle.active).toBe(true);
+  });
+
+  test("keeps Electron packaging dependencies out of the npm lockfile", () => {
+    const lockedPackages = Object.keys(packageLock.packages || {});
+
+    expect(lockedPackages).not.toContain("node_modules/electron");
+    expect(lockedPackages).not.toContain("node_modules/electron-builder");
+    expect(lockedPackages).not.toContain("node_modules/electron-builder-squirrel-windows");
+    expect(lockedPackages).not.toContain("node_modules/electron-winstaller");
+    expect(lockedPackages.some((packagePath) => packagePath.startsWith("node_modules/@electron/"))).toBe(false);
   });
 });
