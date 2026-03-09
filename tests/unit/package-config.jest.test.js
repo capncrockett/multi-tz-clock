@@ -11,6 +11,9 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.scripts["test:desktop"]).toBe(
       "npm run test:dev-host && npm run test:tauri && npm run test:e2e:desktop"
     );
+    expect(packageJson.scripts["test:desktop:proof"]).toBe(
+      "npm run test:desktop && npm run test:tauri:smoke"
+    );
     expect(packageJson.scripts["test:tauri"]).toBe("cargo test --manifest-path src-tauri\\Cargo.toml");
     expect(packageJson.scripts["test:tauri:smoke"]).toBe("node scripts/test-tauri-smoke.cjs");
     expect(packageJson.scripts["test:dev-host"]).toBe(

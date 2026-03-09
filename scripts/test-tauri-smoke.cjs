@@ -9,8 +9,15 @@ const smokeTimeoutMs = Number(process.env.TAURI_SMOKE_TIMEOUT_MS || 90000);
 const defaultSmokeState = Object.freeze({
   shell: "desktop",
   windowPresetId: "medium",
-  isUiVisible: false
+  isUiVisible: false,
+  isAlwaysOnTop: true
 });
+
+function assertSignalField(signal, fieldName, expectedValue) {
+  if (signal[fieldName] !== expectedValue) {
+    throw new Error(`Expected ${fieldName}=${expectedValue}, received ${signal[fieldName]}`);
+  }
+}
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -128,21 +135,10 @@ async function launchNativeSmoke({
       throw new Error(`Smoke signal pid ${signal.pid} did not match launched pid ${child.pid}`);
     }
 
-    if (signal.shell !== expectedState.shell) {
-      throw new Error(`Expected desktop shell smoke signal ${expectedState.shell}, received ${signal.shell}`);
-    }
-
-    if (signal.windowPresetId !== expectedState.windowPresetId) {
-      throw new Error(
-        `Expected preset ${expectedState.windowPresetId}, received ${signal.windowPresetId}`
-      );
-    }
-
-    if (signal.isUiVisible !== expectedState.isUiVisible) {
-      throw new Error(
-        `Expected isUiVisible=${expectedState.isUiVisible}, received ${signal.isUiVisible}`
-      );
-    }
+    assertSignalField(signal, "shell", expectedState.shell);
+    assertSignalField(signal, "windowPresetId", expectedState.windowPresetId);
+    assertSignalField(signal, "isUiVisible", expectedState.isUiVisible);
+    assertSignalField(signal, "isAlwaysOnTop", expectedState.isAlwaysOnTop);
 
     await waitForProcessExit(child, 5000);
     return signal;
@@ -173,7 +169,7 @@ async function main() {
     await fs.writeFile(preferencesPath, JSON.stringify({
       windowPresetId: "small",
       isUiVisible: true,
-      isAlwaysOnTop: true,
+      isAlwaysOnTop: false,
       launchOnStartup: false
     }, null, 2) + "\n");
     await fs.rm(signalPath, { force: true });
@@ -184,12 +180,13 @@ async function main() {
       expectedState: {
         shell: "desktop",
         windowPresetId: "small",
-        isUiVisible: true
+        isUiVisible: true,
+        isAlwaysOnTop: false
       }
     });
 
     console.log(
-      `Verified native Tauri frontend load and persisted host state via ${signalPath} `
+      `Verified native Tauri frontend load, always-on-top host state, and persisted host state via ${signalPath} `
       + `(default pid ${defaultSignal.pid}, persisted pid ${persistedSignal.pid})`
     );
   } finally {

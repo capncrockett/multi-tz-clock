@@ -82,6 +82,12 @@ struct FrontendSmokeReport {
 }
 
 #[derive(Serialize, Deserialize)]
+struct FrontendSmokeHostProbe {
+    #[serde(rename = "isAlwaysOnTop")]
+    is_always_on_top: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize)]
 struct FrontendSmokeSignal {
     #[serde(rename = "windowLabel")]
     window_label: String,
@@ -94,6 +100,8 @@ struct FrontendSmokeSignal {
     window_preset_id: Option<String>,
     #[serde(rename = "isUiVisible")]
     is_ui_visible: Option<bool>,
+    #[serde(rename = "isAlwaysOnTop")]
+    is_always_on_top: Option<bool>,
 }
 
 impl DesktopHostState {
@@ -244,6 +252,7 @@ fn should_exit_after_frontend_ready() -> bool {
 fn persist_frontend_smoke_signal(
     window_label: &str,
     report: Option<FrontendSmokeReport>,
+    host_probe: Option<FrontendSmokeHostProbe>,
 ) -> Result<Option<PathBuf>, String> {
     let Some(signal_path) = get_frontend_smoke_signal_path() else {
         return Ok(None);
@@ -267,6 +276,7 @@ fn persist_frontend_smoke_signal(
             .as_ref()
             .and_then(|value| value.window_preset_id.clone()),
         is_ui_visible: report.and_then(|value| value.is_ui_visible),
+        is_always_on_top: host_probe.as_ref().and_then(|value| value.is_always_on_top),
     };
     let serialized = serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?;
     fs::write(&signal_path, format!("{serialized}\n")).map_err(|error| error.to_string())?;
@@ -704,7 +714,18 @@ fn desktop_report_frontend_ready(
     report: Option<FrontendSmokeReport>,
 ) -> Result<(), String> {
     let window = get_main_window(&app).map_err(|error| error.to_string())?;
-    let _ = persist_frontend_smoke_signal(window.label(), report)?;
+    let host_probe = if get_frontend_smoke_signal_path().is_some() {
+        let is_always_on_top = window
+            .is_always_on_top()
+            .map_err(|error| error.to_string())?;
+
+        Some(FrontendSmokeHostProbe {
+            is_always_on_top: Some(is_always_on_top),
+        })
+    } else {
+        None
+    };
+    let _ = persist_frontend_smoke_signal(window.label(), report, host_probe)?;
 
     if should_exit_after_frontend_ready() {
         let app_handle = app.clone();
@@ -760,9 +781,9 @@ mod tests {
         fit_bounds_within_area, get_closest_window_preset_id,
         get_overridden_desktop_preferences_path, get_preset_bounds, get_window_preset,
         normalize_preset_id, persist_frontend_smoke_signal, read_desktop_preferences,
-        should_exit_after_frontend_ready, FrontendSmokeReport, FrontendSmokeSignal,
-        PersistedDesktopPreferences, DESKTOP_PREFERENCES_PATH_ENV, FRONTEND_SMOKE_EXIT_ENV,
-        FRONTEND_SMOKE_SIGNAL_ENV, WINDOW_SIZE_PRESETS,
+        should_exit_after_frontend_ready, FrontendSmokeHostProbe, FrontendSmokeReport,
+        FrontendSmokeSignal, PersistedDesktopPreferences, DESKTOP_PREFERENCES_PATH_ENV,
+        FRONTEND_SMOKE_EXIT_ENV, FRONTEND_SMOKE_SIGNAL_ENV, WINDOW_SIZE_PRESETS,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -854,7 +875,7 @@ mod tests {
             std::env::remove_var(FRONTEND_SMOKE_SIGNAL_ENV);
         }
 
-        let result = persist_frontend_smoke_signal("main", None)
+        let result = persist_frontend_smoke_signal("main", None, None)
             .expect("missing smoke path should not fail");
 
         assert_eq!(result, None);
@@ -965,6 +986,9 @@ mod tests {
                 window_preset_id: Some("medium".into()),
                 is_ui_visible: Some(false),
             }),
+            Some(FrontendSmokeHostProbe {
+                is_always_on_top: Some(true),
+            }),
         )
         .expect("smoke signal should be written")
         .expect("smoke signal path should be returned");
@@ -980,6 +1004,7 @@ mod tests {
         assert_eq!(payload.platform.as_deref(), Some("Windows"));
         assert_eq!(payload.window_preset_id.as_deref(), Some("medium"));
         assert_eq!(payload.is_ui_visible, Some(false));
+        assert_eq!(payload.is_always_on_top, Some(true));
 
         let _ = fs::remove_file(&signal_path);
         unsafe {

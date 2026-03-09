@@ -182,6 +182,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - `npm run test:integration`
 - `npm run test:node`
 - Combined desktop stack: `npm run test:desktop`
+- Strongest desktop proof stack: `npm run test:desktop:proof`
 - Static dev-host slice: `npm run test:dev-host`
 
 ## Automated Tauri Host Testing
@@ -194,7 +195,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - work-area fitting, including oversized-window edge cases
 - Run with: `npm run test:tauri`.
 - Native Windows smoke harness: `npm run test:tauri:smoke`.
-  It launches the built `.exe`, waits for a frontend-ready signal, asserts the live desktop-shell bridge plus default host state, then relaunches against a seeded preferences file to confirm persisted host state is applied.
+  It launches the built `.exe`, waits for a frontend-ready signal, asserts the live desktop-shell bridge plus default host state, verifies the native always-on-top host state, then relaunches against a seeded preferences file to confirm persisted host state is applied.
 
 ## Automated Dev-Host Testing
 
