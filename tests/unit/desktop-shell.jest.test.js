@@ -7,6 +7,10 @@ const desktopShellScript = fs.readFileSync(
   "utf8"
 );
 
+function flushPromises() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 function loadDesktopShell(options = {}) {
   const invoke = jest.fn(options.invokeImpl || (async (commandName, args) => {
     switch (commandName) {
@@ -86,19 +90,29 @@ describe("desktop-shell bridge", () => {
 
   test("invokes Tauri commands for desktop state queries and mutations", async () => {
     const result = loadDesktopShell();
+    await flushPromises();
 
-    expect(result.invoke).toHaveBeenNthCalledWith(1, "desktop_report_frontend_ready");
+    expect(result.invoke).toHaveBeenNthCalledWith(1, "desktop_get_window_size_preset");
+    expect(result.invoke).toHaveBeenNthCalledWith(2, "desktop_get_ui_visibility");
+    expect(result.invoke).toHaveBeenNthCalledWith(3, "desktop_report_frontend_ready", {
+      report: {
+        shell: "desktop",
+        platform: "Windows",
+        windowPresetId: "medium",
+        isUiVisible: false
+      }
+    });
     await expect(result.desktopShell.getWindowSizePreset()).resolves.toBe("medium");
     await expect(result.desktopShell.getUiVisibility()).resolves.toBe(false);
     await expect(result.desktopShell.setWindowSizePreset("small")).resolves.toBe("small");
     await expect(result.desktopShell.setUiVisibility(true)).resolves.toBe(true);
 
-    expect(result.invoke).toHaveBeenNthCalledWith(2, "desktop_get_window_size_preset");
-    expect(result.invoke).toHaveBeenNthCalledWith(3, "desktop_get_ui_visibility");
-    expect(result.invoke).toHaveBeenNthCalledWith(4, "desktop_set_window_size_preset", {
+    expect(result.invoke).toHaveBeenNthCalledWith(4, "desktop_get_window_size_preset");
+    expect(result.invoke).toHaveBeenNthCalledWith(5, "desktop_get_ui_visibility");
+    expect(result.invoke).toHaveBeenNthCalledWith(6, "desktop_set_window_size_preset", {
       presetId: "small"
     });
-    expect(result.invoke).toHaveBeenNthCalledWith(5, "desktop_set_ui_visibility", {
+    expect(result.invoke).toHaveBeenNthCalledWith(7, "desktop_set_ui_visibility", {
       isVisible: true
     });
   });

@@ -20,6 +20,7 @@ const TOGGLE_LAUNCH_ON_STARTUP_MENU_ID: &str = "toggle-launch-on-startup";
 const QUIT_MENU_ID: &str = "quit";
 const DEFAULT_WINDOW_PRESET_ID: &str = "medium";
 const DESKTOP_PREFERENCES_FILE_NAME: &str = "desktop-preferences.json";
+const DESKTOP_PREFERENCES_PATH_ENV: &str = "MULTI_TZ_CLOCK_PREFERENCES_PATH";
 const FRONTEND_SMOKE_SIGNAL_ENV: &str = "MULTI_TZ_CLOCK_SMOKE_SIGNAL_PATH";
 const FRONTEND_SMOKE_EXIT_ENV: &str = "MULTI_TZ_CLOCK_SMOKE_EXIT_AFTER_READY";
 
@@ -71,12 +72,28 @@ struct DesktopHostStateInner {
 }
 
 #[derive(Serialize, Deserialize)]
+struct FrontendSmokeReport {
+    shell: Option<String>,
+    platform: Option<String>,
+    #[serde(rename = "windowPresetId")]
+    window_preset_id: Option<String>,
+    #[serde(rename = "isUiVisible")]
+    is_ui_visible: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize)]
 struct FrontendSmokeSignal {
     #[serde(rename = "windowLabel")]
     window_label: String,
     pid: u32,
     #[serde(rename = "timestampMs")]
     timestamp_ms: u128,
+    shell: Option<String>,
+    platform: Option<String>,
+    #[serde(rename = "windowPresetId")]
+    window_preset_id: Option<String>,
+    #[serde(rename = "isUiVisible")]
+    is_ui_visible: Option<bool>,
 }
 
 impl DesktopHostState {
@@ -197,8 +214,18 @@ fn get_main_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 }
 
 fn get_desktop_preferences_path(app: &AppHandle) -> Option<PathBuf> {
+    if let Some(path) = get_overridden_desktop_preferences_path() {
+        return Some(path);
+    }
+
     let app_config_dir = app.path().app_config_dir().ok()?;
     Some(app_config_dir.join(DESKTOP_PREFERENCES_FILE_NAME))
+}
+
+fn get_overridden_desktop_preferences_path() -> Option<PathBuf> {
+    std::env::var_os(DESKTOP_PREFERENCES_PATH_ENV)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
 }
 
 fn get_frontend_smoke_signal_path() -> Option<PathBuf> {
@@ -214,7 +241,10 @@ fn should_exit_after_frontend_ready() -> bool {
     )
 }
 
-fn persist_frontend_smoke_signal(window_label: &str) -> Result<Option<PathBuf>, String> {
+fn persist_frontend_smoke_signal(
+    window_label: &str,
+    report: Option<FrontendSmokeReport>,
+) -> Result<Option<PathBuf>, String> {
     let Some(signal_path) = get_frontend_smoke_signal_path() else {
         return Ok(None);
     };
@@ -231,6 +261,12 @@ fn persist_frontend_smoke_signal(window_label: &str) -> Result<Option<PathBuf>, 
         window_label: window_label.to_string(),
         pid: std::process::id(),
         timestamp_ms,
+        shell: report.as_ref().and_then(|value| value.shell.clone()),
+        platform: report.as_ref().and_then(|value| value.platform.clone()),
+        window_preset_id: report
+            .as_ref()
+            .and_then(|value| value.window_preset_id.clone()),
+        is_ui_visible: report.and_then(|value| value.is_ui_visible),
     };
     let serialized = serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?;
     fs::write(&signal_path, format!("{serialized}\n")).map_err(|error| error.to_string())?;
@@ -663,9 +699,12 @@ fn desktop_set_ui_visibility(
 }
 
 #[tauri::command]
-fn desktop_report_frontend_ready(app: AppHandle) -> Result<(), String> {
+fn desktop_report_frontend_ready(
+    app: AppHandle,
+    report: Option<FrontendSmokeReport>,
+) -> Result<(), String> {
     let window = get_main_window(&app).map_err(|error| error.to_string())?;
-    let _ = persist_frontend_smoke_signal(window.label())?;
+    let _ = persist_frontend_smoke_signal(window.label(), report)?;
 
     if should_exit_after_frontend_ready() {
         let app_handle = app.clone();
@@ -718,10 +757,12 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        fit_bounds_within_area, get_closest_window_preset_id, get_preset_bounds, get_window_preset,
+        fit_bounds_within_area, get_closest_window_preset_id,
+        get_overridden_desktop_preferences_path, get_preset_bounds, get_window_preset,
         normalize_preset_id, persist_frontend_smoke_signal, read_desktop_preferences,
-        should_exit_after_frontend_ready, FrontendSmokeSignal, PersistedDesktopPreferences,
-        FRONTEND_SMOKE_EXIT_ENV, FRONTEND_SMOKE_SIGNAL_ENV, WINDOW_SIZE_PRESETS,
+        should_exit_after_frontend_ready, FrontendSmokeReport, FrontendSmokeSignal,
+        PersistedDesktopPreferences, DESKTOP_PREFERENCES_PATH_ENV, FRONTEND_SMOKE_EXIT_ENV,
+        FRONTEND_SMOKE_SIGNAL_ENV, WINDOW_SIZE_PRESETS,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -729,7 +770,7 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
     use tauri::{PhysicalPosition, PhysicalRect, PhysicalSize};
 
-    static SMOKE_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     fn create_temp_preferences_path(name: &str) -> PathBuf {
         let unique_suffix = SystemTime::now()
@@ -806,15 +847,15 @@ mod tests {
 
     #[test]
     fn smoke_signal_is_skipped_when_no_output_path_is_configured() {
-        let _lock = SMOKE_ENV_LOCK
+        let _lock = ENV_LOCK
             .lock()
             .expect("smoke env lock should not be poisoned");
         unsafe {
             std::env::remove_var(FRONTEND_SMOKE_SIGNAL_ENV);
         }
 
-        let result =
-            persist_frontend_smoke_signal("main").expect("missing smoke path should not fail");
+        let result = persist_frontend_smoke_signal("main", None)
+            .expect("missing smoke path should not fail");
 
         assert_eq!(result, None);
     }
@@ -907,7 +948,7 @@ mod tests {
 
     #[test]
     fn smoke_signal_writes_frontend_ready_metadata() {
-        let _lock = SMOKE_ENV_LOCK
+        let _lock = ENV_LOCK
             .lock()
             .expect("smoke env lock should not be poisoned");
         let signal_path = create_temp_preferences_path("frontend-ready-signal");
@@ -916,9 +957,17 @@ mod tests {
             std::env::set_var(FRONTEND_SMOKE_SIGNAL_ENV, &signal_path);
         }
 
-        let written_path = persist_frontend_smoke_signal("main")
-            .expect("smoke signal should be written")
-            .expect("smoke signal path should be returned");
+        let written_path = persist_frontend_smoke_signal(
+            "main",
+            Some(FrontendSmokeReport {
+                shell: Some("desktop".into()),
+                platform: Some("Windows".into()),
+                window_preset_id: Some("medium".into()),
+                is_ui_visible: Some(false),
+            }),
+        )
+        .expect("smoke signal should be written")
+        .expect("smoke signal path should be returned");
         let raw_value = fs::read_to_string(&signal_path).expect("smoke signal should be readable");
         let payload: FrontendSmokeSignal =
             serde_json::from_str(&raw_value).expect("smoke signal should contain valid json");
@@ -927,6 +976,10 @@ mod tests {
         assert_eq!(payload.window_label, "main");
         assert_eq!(payload.pid, std::process::id());
         assert!(payload.timestamp_ms > 0);
+        assert_eq!(payload.shell.as_deref(), Some("desktop"));
+        assert_eq!(payload.platform.as_deref(), Some("Windows"));
+        assert_eq!(payload.window_preset_id.as_deref(), Some("medium"));
+        assert_eq!(payload.is_ui_visible, Some(false));
 
         let _ = fs::remove_file(&signal_path);
         unsafe {
@@ -936,7 +989,7 @@ mod tests {
 
     #[test]
     fn smoke_exit_flag_accepts_common_truthy_values() {
-        let _lock = SMOKE_ENV_LOCK
+        let _lock = ENV_LOCK
             .lock()
             .expect("smoke env lock should not be poisoned");
         unsafe {
@@ -953,6 +1006,25 @@ mod tests {
 
         unsafe {
             std::env::remove_var(FRONTEND_SMOKE_EXIT_ENV);
+        }
+    }
+
+    #[test]
+    fn desktop_preferences_path_can_be_overridden_for_smoke_runs() {
+        let _lock = ENV_LOCK.lock().expect("env lock should not be poisoned");
+        let preferences_path = create_temp_preferences_path("desktop-preferences-override");
+
+        unsafe {
+            std::env::set_var(DESKTOP_PREFERENCES_PATH_ENV, &preferences_path);
+        }
+
+        assert_eq!(
+            get_overridden_desktop_preferences_path(),
+            Some(preferences_path.clone())
+        );
+
+        unsafe {
+            std::env::remove_var(DESKTOP_PREFERENCES_PATH_ENV);
         }
     }
 }

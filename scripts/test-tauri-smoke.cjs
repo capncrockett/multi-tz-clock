@@ -102,6 +102,7 @@ async function main() {
 
   const smokeDir = await fs.mkdtemp(path.join(os.tmpdir(), "multi-tz-clock-tauri-smoke-"));
   const signalPath = path.join(smokeDir, "frontend-ready.json");
+  const preferencesPath = path.join(smokeDir, "desktop-preferences.json");
   let child;
 
   try {
@@ -109,6 +110,7 @@ async function main() {
       cwd: repoRoot,
       env: {
         ...process.env,
+        MULTI_TZ_CLOCK_PREFERENCES_PATH: preferencesPath,
         MULTI_TZ_CLOCK_SMOKE_SIGNAL_PATH: signalPath,
         MULTI_TZ_CLOCK_SMOKE_EXIT_AFTER_READY: "1"
       },
@@ -125,6 +127,18 @@ async function main() {
 
     if (signal.pid !== child.pid) {
       throw new Error(`Smoke signal pid ${signal.pid} did not match launched pid ${child.pid}`);
+    }
+
+    if (signal.shell !== "desktop") {
+      throw new Error(`Expected desktop shell smoke signal, received ${signal.shell}`);
+    }
+
+    if (signal.windowPresetId !== "medium") {
+      throw new Error(`Expected default preset medium, received ${signal.windowPresetId}`);
+    }
+
+    if (signal.isUiVisible !== false) {
+      throw new Error(`Expected clock-only startup in smoke mode, received isUiVisible=${signal.isUiVisible}`);
     }
 
     await waitForProcessExit(child, 5000);

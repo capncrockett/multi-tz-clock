@@ -77,7 +77,23 @@
 
   root.dataset.shell = "desktop";
 
-  void tauriCoreApi.invoke("desktop_report_frontend_ready").catch(() => {});
+  void Promise.all([
+    tauriCoreApi.invoke("desktop_get_window_size_preset"),
+    tauriCoreApi.invoke("desktop_get_ui_visibility")
+  ])
+    .then(function onDesktopStateResolved(values) {
+      currentPresetId = normalizePresetId(values?.[0]);
+      isUiVisible = !!values?.[1];
+      return tauriCoreApi.invoke("desktop_report_frontend_ready", {
+        report: {
+          shell: root.dataset.shell || null,
+          platform: navigator.userAgentData?.platform || navigator.platform || "desktop",
+          windowPresetId: currentPresetId,
+          isUiVisible
+        }
+      });
+    })
+    .catch(() => {});
 
   void tauriEventApi.listen("desktop:window-size-preset-changed", function onPresetChanged(event) {
     currentPresetId = normalizePresetId(event?.payload);

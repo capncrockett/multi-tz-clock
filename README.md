@@ -77,6 +77,8 @@ Run the native Tauri smoke harness on Windows:
 npm run test:tauri:smoke
 ```
 
+This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected default host state.
+
 Run the static dev-host reliability tests:
 
 ```bash
