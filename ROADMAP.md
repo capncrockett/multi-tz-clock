@@ -21,7 +21,7 @@ Unlike typical world clock apps that show multiple separate dials, this project 
   - local storage persistence is shipped
   - geolocation-based local timezone detection is shipped
   - sub-hour timezone precision edge-case handling is shipped
-- Phase 2 desktop packaging is now in progress with a Tauri target and an Electron proof of concept as the current fallback shell.
+- Phase 2 desktop packaging is now centered on the Tauri host in this repo.
 - Phase 3 through Phase 5 have not started yet.
 
 ---
@@ -70,49 +70,30 @@ Non-goals:
 
 ---
 
-## Phase 2 - POC Desktop App In Progress
+## Phase 2 - Desktop App In Progress
 
 Goal: Wrap the browser app into a desktop widget-style window.
 
-Current fallback shell - Electron:
-
-- Minimal shell around existing web frontend
-- Frameless, always-on-top, transparent window
-- Draggable/resizable behavior
-- System tray integration
-- Auto-launch on startup
-
 Shipped in this checkpoint:
 
-- Electron host bootstrapped around the existing browser UI
-- Frameless transparent always-on-top window
-- Desktop-only drag bar for moving the window
-- Resizable shell window
-- System tray menu with UI toggle, pin toggle, launch-on-startup toggle, and quit
-- Desktop host preferences persisted locally under the Electron user-data directory
-- Windows login startup wiring for the desktop app
-- Windows packaging flow via Electron Builder with installer output scripts
-- Tauri v2 scaffold added in-repo under `src-tauri/`
+- Tauri v2 host added in-repo under `src-tauri/`
 - Tauri dev/build scripts added without changing the browser app's source-of-truth role
-- Existing renderer contract extended so Tauri can load the same frontend as Electron/browser
-- Tauri tray host now supports show/hide window, show/hide UI mode, always-on-top toggle, quit, and hide-on-close behavior
-- Tauri desktop host now owns its current window preset and UI visibility state instead of relying on renderer-only sizing
-- Tauri desktop host now persists its local host preferences to an app-config JSON file between launches
-- Tauri tray host now supports launch-on-startup toggling and applies the persisted startup preference on launch
-- Tauri host now snaps resized windows back to the nearest preset and re-fits full-UI bounds inside the monitor work area
-
-Selected target shell - Tauri:
-
-- Same frontend with Rust host
-- Smaller binary footprint
-- Native tray/autostart integration
-- Better fit for future size-sensitive platform work
+- Existing renderer contract extended so Tauri can load the same frontend as browser mode
+- Frameless transparent always-on-top desktop window
+- Desktop-only drag bar for moving the window
+- System tray show/hide behavior plus menu actions for UI visibility, pin toggle, launch-on-startup, and quit
+- Hide-on-close behavior
+- Desktop host-owned window preset and UI visibility state
+- Local host preference persistence under the app config directory
+- Launch-on-startup toggling and persisted startup preference application
+- Preset snapping and monitor work-area fitting behavior
+- Native Windows smoke harness plus desktop verification scripts
+- Electron host, packaging scripts, and Electron-only tests removed from the repo
 
 Still pending in Phase 2:
 
-- Decide whether Tauri host preferences stay in Rust-owned JSON or move behind a shared desktop abstraction
-- Prioritize directed desktop-host test coverage beyond the browser-source-of-truth renderer path, starting with mocked desktop-shell E2E flows and Rust host tests before further host cleanup
-- Keep Electron as fallback until the Tauri host reaches parity and replaces it
+- Keep expanding directed native-host verification where it is reliable and fast
+- Finish the short manual desktop release pass around tray restore, close-to-tray, and visual polish
 
 ---
 
@@ -162,7 +143,7 @@ Goal: Android support.
 | Phase | Platform | Tech |
 |-------|----------|------|
 | 1 | Browser | HTML + Canvas + vanilla JS/CSS |
-| 2 | Desktop | Tauri target, Electron fallback during migration |
+| 2 | Desktop | Tauri |
 | 3 | Windows | WinUI / widget surface |
 | 4 | Apple | SwiftUI + WidgetKit |
 | 5 | Android | Jetpack Compose |

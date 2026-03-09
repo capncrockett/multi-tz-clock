@@ -914,7 +914,7 @@ mod tests {
     }
 
     #[test]
-    fn nearest_preset_matches_electron_window_snap_rules() {
+    fn nearest_preset_matches_shared_window_snap_rules() {
         assert_eq!(get_closest_window_preset_id(210, 420, true), "xsmall");
         assert_eq!(get_closest_window_preset_id(320, 620, true), "small");
         assert_eq!(get_closest_window_preset_id(400, 545, true), "medium");

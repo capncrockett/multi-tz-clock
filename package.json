@@ -3,13 +3,11 @@
   "version": "1.0.0",
   "productName": "Multi-TZ Clock",
   "description": "A single analog clock face with multiple color-coded hour hands, one per time zone. At a glance, see relative time differences between cities without scanning multiple dials.",
-  "main": "desktop/main.cjs",
   "scripts": {
-    "desktop:start": "node scripts/start-electron.cjs",
-    "desktop:pack": "node scripts/build-electron.cjs pack",
-    "desktop:dist": "node scripts/build-electron.cjs dist",
-    "desktop:tauri:dev": "node scripts/start-tauri-dev.cjs",
-    "desktop:tauri:build": "tauri build",
+    "desktop:dev": "node scripts/start-tauri-dev.cjs",
+    "desktop:build": "tauri build",
+    "desktop:tauri:dev": "npm run desktop:dev",
+    "desktop:tauri:build": "npm run desktop:build",
     "tauri": "tauri",
     "prepare": "node scripts/install-hooks.cjs",
     "test": "npm run test:all",
@@ -43,41 +41,9 @@
     "url": "https://github.com/capncrockett/multi-tz-clock/issues"
   },
   "homepage": "https://github.com/capncrockett/multi-tz-clock#readme",
-  "build": {
-    "appId": "com.capnc.multi-tz-clock",
-    "productName": "Multi-TZ Clock",
-    "asar": true,
-    "files": [
-      "index.html",
-      "assets/**/*",
-      "desktop/**/*.cjs",
-      "package.json"
-    ],
-    "directories": {
-      "buildResources": "build",
-      "output": "dist"
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "build/icon.png",
-      "signAndEditExecutable": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Multi-TZ Clock"
-    }
-  },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@tauri-apps/cli": "^2.10.1",
-    "electron": "^40.8.0",
-    "electron-builder": "^26.8.1",
     "jest": "^30.2.0"
   },
   "private": true

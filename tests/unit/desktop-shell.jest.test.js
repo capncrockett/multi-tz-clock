@@ -73,7 +73,7 @@ function loadDesktopShell(options = {}) {
 
 describe("desktop-shell bridge", () => {
   test("leaves an existing desktop shell bridge in place", () => {
-    const existingDesktopShell = Object.freeze({ isDesktop: true, marker: "electron" });
+    const existingDesktopShell = Object.freeze({ isDesktop: true, marker: "existing-bridge" });
     const result = loadDesktopShell({ existingDesktopShell });
 
     expect(result.desktopShell).toBe(existingDesktopShell);

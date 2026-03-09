@@ -5,8 +5,7 @@ This document is written for AI coding agents and engineers migrating this proje
 Current platform direction:
 
 - Browser remains the product source of truth.
-- Electron is the working desktop fallback shell that proved the widget UX.
-- Tauri is the selected Phase 2 desktop target to replace the Electron shell once parity is reached.
+- Tauri is the Phase 2 desktop host.
 - Later Windows, macOS, iOS, and Android ports should preserve the shared clock/timezone logic instead of inheriting desktop-host implementation details.
 
 ## File Layout
@@ -16,18 +15,14 @@ index.html           - App shell markup and DOM structure
 assets/css/theme.css - Shared theme tokens for DOM + canvas rendering
 assets/css/main.css  - Layout, accessibility, and responsive rules
 assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-city helpers (browser + Node)
-assets/js/desktop-shell.js - Browser-safe desktop bridge that lets Electron and Tauri expose the same renderer contract
+assets/js/desktop-shell.js - Browser-safe desktop bridge that maps Tauri onto the existing renderer contract
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
-desktop/window-presets.json - Shared desktop size presets consumed by both Electron and Tauri hosts
-desktop/window-config.cjs - Pure Electron window/tray descriptors used by tests + main process
-desktop/preferences.cjs - Desktop host preference normalization + local JSON persistence
-desktop/main.cjs     - Electron host process (window lifecycle, tray, shell behaviors)
-desktop/preload.cjs  - Desktop-only bridge that tags the renderer for host-specific UI
-scripts/build-electron.cjs - Packaging wrapper that assigns a fresh `dist/` output folder per build
+desktop/window-presets.json - Shared desktop size presets consumed by the Tauri host and tests
+scripts/start-tauri-dev.cjs - Tauri dev wrapper that owns static-server lifecycle
 scripts/serve-static.cjs - Static file server used by `tauri dev` against the existing browser app
 scripts/prepare-tauri-dist.cjs - Copies `index.html` + `assets/` into a minimal frontend folder for Tauri builds
+scripts/test-tauri-smoke.cjs - Native Windows smoke harness for the built Tauri app
 src-tauri/           - Tauri v2 host scaffold (config, capabilities, icons, Rust entrypoint)
-build/icon.png       - Packaged desktop app icon used by Electron Builder
 tests/unit/*.jest.test.js - Jest unit tests for pure utility logic
 tests/integration/*.integration.jest.test.js - Jest integration tests for composed layout rules
 tests/e2e/*.spec.js  - Playwright browser smoke tests
@@ -93,52 +88,16 @@ Contains these logical sections:
 - ACCESSIBILITY: `updateScreenReader()`
 - MAIN LOOP: `draw()`
 
-### `desktop/window-config.cjs`
-Contains pure helpers for Electron host setup:
-
-- shared preset loading from `desktop/window-presets.json`
-- `createMainWindowOptions()`
-- `getClockHtmlPath()`
-- `createTrayMenuEntries()`
-
-### `desktop/preferences.cjs`
-Contains desktop-host preference helpers:
-
-- `normalizeDesktopPreferences()`
-- `getDesktopPreferencesPath()`
-- `readDesktopPreferences()`
-- `writeDesktopPreferences()`
-
-### `desktop/main.cjs`
-Contains Electron-specific host logic:
-
-- window creation and hide-to-tray lifecycle
-- tray icon and context menu
-- always-on-top toggle wiring
-- Windows login-startup wiring
-- desktop preference load/save under Electron `userData`
-- desktop app activation and quit flow
-
-This Electron host is now considered an interim fallback shell, not the final desktop direction.
-
 ### Packaging
 
-- `package.json` contains the Electron Builder config for Windows packaging.
-- `npm run desktop:pack` creates an unpacked app directory for local packaging smoke checks.
-- `npm run desktop:dist` builds the Windows NSIS installer into `dist/`.
-- `npm run desktop:tauri:dev` uses `scripts/start-tauri-dev.cjs` to start or reuse the static frontend server, then launches the Tauri host.
-- `npm run desktop:tauri:build` stages `index.html` + `assets/` into `.tauri-dist/` and builds the Tauri host.
-
-These packaging paths remain useful until a Tauri build path reaches feature parity.
-
-### `desktop/preload.cjs`
-Contains a minimal `window.desktopShell` bridge and marks the document with `data-shell="desktop"` so the existing frontend can expose desktop-only drag affordances without changing browser behavior.
+- `npm run desktop:dev` uses `scripts/start-tauri-dev.cjs` to start or reuse the static frontend server, then launches the Tauri host.
+- `npm run desktop:build` stages `index.html` + `assets/` into `.tauri-dist/` and builds the Tauri host.
+- `npm run desktop:tauri:dev` and `npm run desktop:tauri:build` remain as compatibility aliases.
 
 ### `assets/js/desktop-shell.js`
-Contains the desktop-shell bridge used outside Electron:
+Contains the desktop-shell bridge used by Tauri:
 
 - leaves browser behavior untouched when no desktop host is present
-- preserves Electron's existing `window.desktopShell` contract when the preload bridge already provided it
 - maps Tauri `invoke` commands onto the same `getWindowSizePreset()`, `setWindowSizePreset()`, `getUiVisibility()`, and `setUiVisibility()` hooks used by `assets/js/app.js`
 - listens for Tauri-emitted desktop host events so tray actions can keep the existing renderer contract synchronized
 - marks the document with `data-shell="desktop"` so the existing CSS and renderer logic stay source-of-truth
@@ -269,7 +228,7 @@ What is platform-specific:
 Current Tauri spike boundary:
 
 - Browser HTML/CSS/JS remains canonical and is loaded directly by Tauri
-- Electron and Tauri now share the same window preset definitions from `desktop/window-presets.json`
+- Shared desktop window preset definitions live in `desktop/window-presets.json`
 - Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, launch-on-startup, hide-on-close behavior, local host preference persistence, and preset snap/work-area fitting behavior
 - Tauri host preferences currently live in a JSON file under the app config directory, separate from browser `localStorage` / IndexedDB state
-- The main remaining Tauri parity work is broader desktop-host verification and any final cleanup needed before Electron removal
+- The main remaining desktop work is broader native-host verification and release-readiness polish

@@ -1,10 +1,11 @@
 const packageJson = require("../../package.json");
 
 describe("package.json desktop packaging config", () => {
-  test("exposes explicit Electron packaging scripts", () => {
-    expect(packageJson.scripts["desktop:pack"]).toBe("node scripts/build-electron.cjs pack");
-    expect(packageJson.scripts["desktop:dist"]).toBe("node scripts/build-electron.cjs dist");
-    expect(packageJson.scripts["desktop:tauri:dev"]).toBe("node scripts/start-tauri-dev.cjs");
+  test("exposes Tauri-first desktop scripts", () => {
+    expect(packageJson.scripts["desktop:dev"]).toBe("node scripts/start-tauri-dev.cjs");
+    expect(packageJson.scripts["desktop:build"]).toBe("tauri build");
+    expect(packageJson.scripts["desktop:tauri:dev"]).toBe("npm run desktop:dev");
+    expect(packageJson.scripts["desktop:tauri:build"]).toBe("npm run desktop:build");
   });
 
   test("exposes explicit desktop-host test scripts", () => {
@@ -22,35 +23,10 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.scripts["test:e2e:desktop"]).toBe("playwright test --grep desktop");
   });
 
-  test("defines a Windows installer build for the desktop app", () => {
+  test("removes the Electron desktop packaging config", () => {
     expect(packageJson.productName).toBe("Multi-TZ Clock");
-    expect(packageJson.build).toMatchObject({
-      appId: "com.capnc.multi-tz-clock",
-      productName: "Multi-TZ Clock",
-      asar: true,
-      directories: {
-        buildResources: "build",
-        output: "dist"
-      },
-      win: {
-        target: ["nsis"],
-        icon: "build/icon.png",
-        signAndEditExecutable: false,
-        artifactName: "${productName}-Setup-${version}.${ext}"
-      },
-      nsis: {
-        oneClick: false,
-        allowToChangeInstallationDirectory: true,
-        createDesktopShortcut: false,
-        createStartMenuShortcut: true,
-        shortcutName: "Multi-TZ Clock"
-      }
-    });
-    expect(packageJson.build.files).toEqual([
-      "index.html",
-      "assets/**/*",
-      "desktop/**/*.cjs",
-      "package.json"
-    ]);
+    expect(packageJson.build).toBeUndefined();
+    expect(packageJson.devDependencies.electron).toBeUndefined();
+    expect(packageJson.devDependencies["electron-builder"]).toBeUndefined();
   });
 });

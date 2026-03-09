@@ -6,37 +6,21 @@ A single analog clock face with multiple color-coded hour hands, one per time zo
 
 Open `index.html` in any modern browser. No build step, no dependencies.
 
-Launch the Electron desktop proof of concept:
+Launch the desktop app in Tauri dev mode:
 
 ```bash
-npm run desktop:start
+npm run desktop:dev
 ```
 
-Launch the Tauri desktop spike (requires a Rust toolchain plus the Tauri prerequisites for your OS):
-
-```bash
-npm run desktop:tauri:dev
-```
-
-This wrapper now starts or reuses the local static server before launching `tauri dev`, instead of relying on Tauri's `beforeDevCommand`.
-
-Create an unpacked desktop build under `dist/pack*`:
-
-```bash
-npm run desktop:pack
-```
-
-Build the Windows installer under `dist/dist*`:
-
-```bash
-npm run desktop:dist
-```
+This wrapper starts or reuses the local static frontend server before launching `tauri dev`, instead of relying on Tauri's `beforeDevCommand`.
 
 Build the Tauri desktop host:
 
 ```bash
-npm run desktop:tauri:build
+npm run desktop:build
 ```
+
+The legacy `desktop:tauri:dev` and `desktop:tauri:build` aliases still point at these same commands.
 
 ## Automated Testing
 
@@ -81,7 +65,7 @@ This builds the release app, launches the real Windows executable, and verifies 
 
 Remaining native checks that are still reasonable to do manually in under 30 seconds:
 
-- open `npm run desktop:tauri:dev`
+- open `npm run desktop:dev`
 - left-click the tray icon once to hide the window and once to restore it
 - close the window once and confirm it hides to tray instead of quitting
 - visually confirm the frameless transparent window still looks correct on your desktop
@@ -147,38 +131,37 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - `assets/js/clock-utils.js` - Shared pure logic for layout tiers, timezone grouping, and nearest-city lookup
 - `assets/js/desktop-shell.js` - Browser-safe bridge that maps Tauri onto the existing desktop renderer contract
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
-- `desktop/window-config.cjs` - Pure Electron window and tray descriptors used by tests
-- `desktop/main.cjs` - Electron main-process host for the desktop POC
-- `desktop/preload.cjs` - Desktop-only renderer bridge and shell flag
+- `desktop/window-presets.json` - Shared desktop preset definitions consumed by the Tauri host
+- `scripts/start-tauri-dev.cjs` - Tauri dev wrapper that owns frontend-server lifecycle
 - `scripts/serve-static.cjs` - Static dev server for Tauri against the existing browser frontend
 - `scripts/prepare-tauri-dist.cjs` - Copies `index.html` + `assets/` into a minimal Tauri frontend bundle
+- `scripts/test-tauri-smoke.cjs` - Native Windows smoke harness for the built Tauri app
 - `src-tauri/` - Tauri v2 desktop host scaffold
 - `tests/unit/*.jest.test.js` - Jest unit tests
 - `tests/integration/*.integration.jest.test.js` - Jest integration tests
 - `ARCHITECTURE.md` - Technical deep dive for engineering handoff
 - `ROADMAP.md` - Multi-phase platform plan
 
-## Desktop POC (Phase 2 direction)
+## Desktop Host (Phase 2)
 
-- Electron host around the existing browser app
+- Tauri host around the existing browser app
 - Frameless transparent window with a desktop-only drag bar
 - Always-on-top behavior enabled by default
 - Desktop launches in clock-only mode by default; `Show UI` restores the full controls/chip chrome
 - Three preset window sizes (`xsmall`, `small`, `medium`) with fixed full-UI and clock-only bounds per preset and no desktop scrolling
 - System tray click to show/hide the whole widget, plus menu actions for UI chrome toggle, pin toggle, Windows launch-on-startup, and quit
-- Desktop-only host preferences persist to a local JSON file under Electron `userData`; browser zones/toggles still persist in `localStorage` with IndexedDB fallback
-- Windows packaging is wired through Electron Builder with `desktop:pack` for unpacked smoke builds and `desktop:dist` for the NSIS installer
+- Desktop-only host preferences persist to a local JSON file under the app config directory; browser zones/toggles still persist in `localStorage` with IndexedDB fallback
+- Windows packaging is handled by Tauri via `npm run desktop:build`, producing native `.exe`, `.msi`, and NSIS bundles under `src-tauri/target/release/`
 
 Still pending for Phase 2:
 
-- Finish porting Electron shell behaviors to Tauri: tray, startup, preference persistence, and packaging parity
-- Keep Electron only as a fallback until Tauri reaches parity
+- Keep expanding native-host verification where it is reliable and fast
+- Finish the short manual smoke pass for tray click restore, close-to-tray, and visual polish as part of desktop release readiness
 
 Platform direction:
 
 - Browser remains the source of truth for clock behavior and shared logic.
-- Electron is the current working desktop shell.
-- Tauri is the chosen target for the long-term desktop host because this app is small enough that bundled-browser overhead is disproportionate.
+- Tauri is the desktop host.
 - Future Windows, macOS, iOS, and Android ports should reuse the shared clock/timezone logic rather than inherit desktop-shell implementation details.
 
 ## Features (Phase 1 MVP)
