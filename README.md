@@ -18,6 +18,8 @@ Launch the Tauri desktop spike (requires a Rust toolchain plus the Tauri prerequ
 npm run desktop:tauri:dev
 ```
 
+This wrapper now starts or reuses the local static server before launching `tauri dev`, instead of relying on Tauri's `beforeDevCommand`.
+
 Create an unpacked desktop build under `dist/pack*`:
 
 ```bash

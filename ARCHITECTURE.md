@@ -126,7 +126,7 @@ This Electron host is now considered an interim fallback shell, not the final de
 - `package.json` contains the Electron Builder config for Windows packaging.
 - `npm run desktop:pack` creates an unpacked app directory for local packaging smoke checks.
 - `npm run desktop:dist` builds the Windows NSIS installer into `dist/`.
-- `npm run desktop:tauri:dev` starts a static Node server for the existing frontend and launches the Tauri host.
+- `npm run desktop:tauri:dev` uses `scripts/start-tauri-dev.cjs` to start or reuse the static frontend server, then launches the Tauri host.
 - `npm run desktop:tauri:build` stages `index.html` + `assets/` into `.tauri-dist/` and builds the Tauri host.
 
 These packaging paths remain useful until a Tauri build path reaches feature parity.

@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "identifier": "com.capnc.multi-tz-clock",
   "build": {
-    "beforeDevCommand": "node scripts/serve-static.cjs",
     "devUrl": "http://127.0.0.1:4173",
     "beforeBuildCommand": "node scripts/prepare-tauri-dist.cjs",
     "frontendDist": "../.tauri-dist"

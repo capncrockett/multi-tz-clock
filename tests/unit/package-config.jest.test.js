@@ -4,6 +4,7 @@ describe("package.json desktop packaging config", () => {
   test("exposes explicit Electron packaging scripts", () => {
     expect(packageJson.scripts["desktop:pack"]).toBe("node scripts/build-electron.cjs pack");
     expect(packageJson.scripts["desktop:dist"]).toBe("node scripts/build-electron.cjs dist");
+    expect(packageJson.scripts["desktop:tauri:dev"]).toBe("node scripts/start-tauri-dev.cjs");
   });
 
   test("exposes explicit desktop-host test scripts", () => {

@@ -8,7 +8,7 @@
     "desktop:start": "node scripts/start-electron.cjs",
     "desktop:pack": "node scripts/build-electron.cjs pack",
     "desktop:dist": "node scripts/build-electron.cjs dist",
-    "desktop:tauri:dev": "tauri dev",
+    "desktop:tauri:dev": "node scripts/start-tauri-dev.cjs",
     "desktop:tauri:build": "tauri build",
     "tauri": "tauri",
     "prepare": "node scripts/install-hooks.cjs",
