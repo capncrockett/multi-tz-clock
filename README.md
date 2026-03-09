@@ -79,6 +79,13 @@ npm run test:tauri:smoke
 
 This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected default host state.
 
+Remaining native checks that are still reasonable to do manually in under 30 seconds:
+
+- open `npm run desktop:tauri:dev`
+- left-click the tray icon to hide and restore the window
+- use the tray menu to toggle `Always on Top`
+- close the window once and confirm it hides to tray instead of quitting
+
 Run the static dev-host reliability tests:
 
 ```bash

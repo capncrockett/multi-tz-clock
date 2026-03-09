@@ -6,6 +6,11 @@ const os = require("node:os");
 const repoRoot = path.resolve(__dirname, "..");
 const executablePath = path.join(repoRoot, "src-tauri", "target", "release", "multi-tz-clock.exe");
 const smokeTimeoutMs = Number(process.env.TAURI_SMOKE_TIMEOUT_MS || 90000);
+const defaultSmokeState = Object.freeze({
+  shell: "desktop",
+  windowPresetId: "medium",
+  isUiVisible: false
+});
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -92,17 +97,11 @@ async function killProcessTree(pid) {
   }
 }
 
-async function main() {
-  if (process.platform !== "win32") {
-    console.log("Skipping native Tauri smoke test outside Windows.");
-    return;
-  }
-
-  await runCommand("cmd.exe", ["/d", "/s", "/c", "npm run desktop:tauri:build"]);
-
-  const smokeDir = await fs.mkdtemp(path.join(os.tmpdir(), "multi-tz-clock-tauri-smoke-"));
-  const signalPath = path.join(smokeDir, "frontend-ready.json");
-  const preferencesPath = path.join(smokeDir, "desktop-preferences.json");
+async function launchNativeSmoke({
+  signalPath,
+  preferencesPath,
+  expectedState
+}) {
   let child;
 
   try {
@@ -129,22 +128,71 @@ async function main() {
       throw new Error(`Smoke signal pid ${signal.pid} did not match launched pid ${child.pid}`);
     }
 
-    if (signal.shell !== "desktop") {
-      throw new Error(`Expected desktop shell smoke signal, received ${signal.shell}`);
+    if (signal.shell !== expectedState.shell) {
+      throw new Error(`Expected desktop shell smoke signal ${expectedState.shell}, received ${signal.shell}`);
     }
 
-    if (signal.windowPresetId !== "medium") {
-      throw new Error(`Expected default preset medium, received ${signal.windowPresetId}`);
+    if (signal.windowPresetId !== expectedState.windowPresetId) {
+      throw new Error(
+        `Expected preset ${expectedState.windowPresetId}, received ${signal.windowPresetId}`
+      );
     }
 
-    if (signal.isUiVisible !== false) {
-      throw new Error(`Expected clock-only startup in smoke mode, received isUiVisible=${signal.isUiVisible}`);
+    if (signal.isUiVisible !== expectedState.isUiVisible) {
+      throw new Error(
+        `Expected isUiVisible=${expectedState.isUiVisible}, received ${signal.isUiVisible}`
+      );
     }
 
     await waitForProcessExit(child, 5000);
-    console.log(`Verified native Tauri frontend load via ${signalPath}`);
+    return signal;
   } finally {
     await killProcessTree(child?.pid);
+  }
+}
+
+async function main() {
+  if (process.platform !== "win32") {
+    console.log("Skipping native Tauri smoke test outside Windows.");
+    return;
+  }
+
+  await runCommand("cmd.exe", ["/d", "/s", "/c", "npm run desktop:tauri:build"]);
+
+  const smokeDir = await fs.mkdtemp(path.join(os.tmpdir(), "multi-tz-clock-tauri-smoke-"));
+  const signalPath = path.join(smokeDir, "frontend-ready.json");
+  const preferencesPath = path.join(smokeDir, "desktop-preferences.json");
+
+  try {
+    const defaultSignal = await launchNativeSmoke({
+      signalPath,
+      preferencesPath,
+      expectedState: defaultSmokeState
+    });
+
+    await fs.writeFile(preferencesPath, JSON.stringify({
+      windowPresetId: "small",
+      isUiVisible: true,
+      isAlwaysOnTop: true,
+      launchOnStartup: false
+    }, null, 2) + "\n");
+    await fs.rm(signalPath, { force: true });
+
+    const persistedSignal = await launchNativeSmoke({
+      signalPath,
+      preferencesPath,
+      expectedState: {
+        shell: "desktop",
+        windowPresetId: "small",
+        isUiVisible: true
+      }
+    });
+
+    console.log(
+      `Verified native Tauri frontend load and persisted host state via ${signalPath} `
+      + `(default pid ${defaultSignal.pid}, persisted pid ${persistedSignal.pid})`
+    );
+  } finally {
     await fs.rm(smokeDir, { recursive: true, force: true });
   }
 }
