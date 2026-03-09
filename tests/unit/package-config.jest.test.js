@@ -1,4 +1,12 @@
+const fs = require("fs");
+const path = require("path");
+
 const packageJson = require("../../package.json");
+const tauriConfig = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "..", "..", "src-tauri", "tauri.conf.json"), "utf8")
+);
+const cargoToml = fs.readFileSync(path.join(__dirname, "..", "..", "src-tauri", "Cargo.toml"), "utf8");
+const cargoVersionMatch = cargoToml.match(/^version = "([^"]+)"$/m);
 
 describe("package.json desktop packaging config", () => {
   test("exposes Tauri-first desktop scripts", () => {
@@ -28,5 +36,14 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.build).toBeUndefined();
     expect(packageJson.devDependencies.electron).toBeUndefined();
     expect(packageJson.devDependencies["electron-builder"]).toBeUndefined();
+  });
+
+  test("keeps Tauri bundle identity aligned with the package metadata", () => {
+    expect(cargoVersionMatch).not.toBeNull();
+    expect(tauriConfig.productName).toBe(packageJson.productName);
+    expect(tauriConfig.version).toBe(packageJson.version);
+    expect(cargoVersionMatch[1]).toBe(packageJson.version);
+    expect(tauriConfig.identifier).toBe("com.capnc.multi-tz-clock");
+    expect(tauriConfig.bundle.active).toBe(true);
   });
 });
