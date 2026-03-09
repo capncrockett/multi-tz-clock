@@ -71,11 +71,11 @@ describe('clock-utils: sizing/layout helpers', () => {
 
     expect(medium.fontSize).toBe(13);
     expect(small.fontSize).toBe(12);
-    expect(xsmall.fontSize).toBe(10);
+    expect(xsmall.fontSize).toBe(9);
 
     expect(medium.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
     expect(small.bezelRadius).toBeLessThanOrEqual(150 * 0.62);
-    expect(xsmall.bezelRadius).toBe(162);
+    expect(xsmall.bezelRadius).toBe(156);
   });
 
   test('bezel label offsets stack two labels around one hand position', () => {

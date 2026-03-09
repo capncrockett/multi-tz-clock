@@ -39,9 +39,9 @@
 
   function getBezelLabelLayout(radius, handLength, isSmall, isXSmall) {
     return {
-      fontSize: isXSmall ? 10 : (isSmall ? 12 : 13),
+      fontSize: isXSmall ? 9 : (isSmall ? 12 : 13),
       bezelRadius: isXSmall
-        ? (radius + 12)
+        ? (radius + 6)
         : Math.min(radius * 0.62, handLength + (isSmall ? 14 : 18))
     };
   }

@@ -37,7 +37,8 @@ describe('integration: viewport tier drives numeral density + bezel placement', 
 
     const layout = getBezelLabelLayout(120, 56, flags.isSmall, flags.isXSmall);
     expect(layout.bezelRadius).toBeGreaterThan(120);
-    expect(layout.fontSize).toBe(10);
+    expect(layout.bezelRadius).toBe(126);
+    expect(layout.fontSize).toBe(9);
   });
 
   test('medium tier keeps full numeral set and inner bezel placement', () => {

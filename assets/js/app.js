@@ -97,8 +97,8 @@ const get12hNumeralStyle = ClockUtils.get12hNumeralStyle || ((radius, small, xsm
   numeralRadius: xsmall ? radius * 0.82 : (small ? radius * 0.85 : radius * 0.72)
 }));
 const getBezelLabelLayout = ClockUtils.getBezelLabelLayout || ((radius, handLength, small, xsmall) => ({
-  fontSize: xsmall ? 10 : (small ? 12 : 13),
-  bezelRadius: xsmall ? (radius + 12) : Math.min(radius * 0.62, handLength + (small ? 14 : 18))
+  fontSize: xsmall ? 9 : (small ? 12 : 13),
+  bezelRadius: xsmall ? (radius + 6) : Math.min(radius * 0.62, handLength + (small ? 14 : 18))
 }));
 const getBezelLabelOffsets = ClockUtils.getBezelLabelOffsets || ((count, spacing) => (
   count <= 1 ? [0] : [-(spacing / 2), spacing / 2]
