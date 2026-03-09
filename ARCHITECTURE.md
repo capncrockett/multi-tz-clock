@@ -152,9 +152,10 @@ Contains pure functions used by both browser runtime and Jest tests:
 - shared preset loading and fallback bounds
 - nearest-preset snap rules
 - work-area fitting, including oversized-window edge cases
+- smoke flag parsing for native verification hooks
 - Run with: `npm run test:tauri`.
 - Native Windows smoke harness: `npm run test:tauri:smoke`.
-  It launches the built `.exe`, waits for a frontend-ready signal, asserts the live desktop-shell bridge plus default host state, verifies the native always-on-top host state, then relaunches against a seeded preferences file to confirm persisted host state is applied.
+  It launches the built `.exe`, waits for a frontend-ready signal, asserts the live desktop-shell bridge plus default host state, verifies the native always-on-top host state, relaunches once to confirm close-to-tray interception leaves the host alive while hiding the window, then relaunches against a seeded preferences file to confirm persisted host state is applied.
 
 ## Automated Dev-Host Testing
 

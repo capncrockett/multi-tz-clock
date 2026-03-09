@@ -61,13 +61,12 @@ Run the native Tauri smoke harness on Windows:
 npm run test:tauri:smoke
 ```
 
-This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected host state, including native always-on-top state.
+This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected host state, including native always-on-top state, close-to-tray interception, and persisted host preferences.
 
 Remaining native checks that are still reasonable to do manually in under 30 seconds:
 
 - open `npm run desktop:dev`
 - left-click the tray icon once to hide the window and once to restore it
-- close the window once and confirm it hides to tray instead of quitting
 - visually confirm the frameless transparent window still looks correct on your desktop
 
 Run the static dev-host reliability tests:

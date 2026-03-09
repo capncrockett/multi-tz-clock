@@ -10,7 +10,8 @@ const defaultSmokeState = Object.freeze({
   shell: "desktop",
   windowPresetId: "medium",
   isUiVisible: false,
-  isAlwaysOnTop: true
+  isAlwaysOnTop: true,
+  isWindowVisible: true
 });
 
 function assertSignalField(signal, fieldName, expectedValue) {
@@ -107,7 +108,8 @@ async function killProcessTree(pid) {
 async function launchNativeSmoke({
   signalPath,
   preferencesPath,
-  expectedState
+  expectedState,
+  closeAfterReady = false
 }) {
   let child;
 
@@ -118,7 +120,8 @@ async function launchNativeSmoke({
         ...process.env,
         MULTI_TZ_CLOCK_PREFERENCES_PATH: preferencesPath,
         MULTI_TZ_CLOCK_SMOKE_SIGNAL_PATH: signalPath,
-        MULTI_TZ_CLOCK_SMOKE_EXIT_AFTER_READY: "1"
+        MULTI_TZ_CLOCK_SMOKE_EXIT_AFTER_READY: closeAfterReady ? "0" : "1",
+        MULTI_TZ_CLOCK_SMOKE_CLOSE_AFTER_READY: closeAfterReady ? "1" : "0"
       },
       stdio: "ignore",
       windowsHide: true
@@ -139,6 +142,7 @@ async function launchNativeSmoke({
     assertSignalField(signal, "windowPresetId", expectedState.windowPresetId);
     assertSignalField(signal, "isUiVisible", expectedState.isUiVisible);
     assertSignalField(signal, "isAlwaysOnTop", expectedState.isAlwaysOnTop);
+    assertSignalField(signal, "isWindowVisible", expectedState.isWindowVisible);
 
     await waitForProcessExit(child, 5000);
     return signal;
@@ -165,6 +169,17 @@ async function main() {
       preferencesPath,
       expectedState: defaultSmokeState
     });
+    await fs.rm(signalPath, { force: true });
+
+    const closeToTraySignal = await launchNativeSmoke({
+      signalPath,
+      preferencesPath,
+      expectedState: {
+        ...defaultSmokeState,
+        isWindowVisible: false
+      },
+      closeAfterReady: true
+    });
 
     await fs.writeFile(preferencesPath, JSON.stringify({
       windowPresetId: "small",
@@ -181,13 +196,14 @@ async function main() {
         shell: "desktop",
         windowPresetId: "small",
         isUiVisible: true,
-        isAlwaysOnTop: false
+        isAlwaysOnTop: false,
+        isWindowVisible: true
       }
     });
 
     console.log(
-      `Verified native Tauri frontend load, always-on-top host state, and persisted host state via ${signalPath} `
-      + `(default pid ${defaultSignal.pid}, persisted pid ${persistedSignal.pid})`
+      `Verified native Tauri frontend load, close-to-tray interception, always-on-top host state, and persisted host state via ${signalPath} `
+      + `(default pid ${defaultSignal.pid}, close pid ${closeToTraySignal.pid}, persisted pid ${persistedSignal.pid})`
     );
   } finally {
     await fs.rm(smokeDir, { recursive: true, force: true });

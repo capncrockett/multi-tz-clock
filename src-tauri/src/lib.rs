@@ -23,6 +23,7 @@ const DESKTOP_PREFERENCES_FILE_NAME: &str = "desktop-preferences.json";
 const DESKTOP_PREFERENCES_PATH_ENV: &str = "MULTI_TZ_CLOCK_PREFERENCES_PATH";
 const FRONTEND_SMOKE_SIGNAL_ENV: &str = "MULTI_TZ_CLOCK_SMOKE_SIGNAL_PATH";
 const FRONTEND_SMOKE_EXIT_ENV: &str = "MULTI_TZ_CLOCK_SMOKE_EXIT_AFTER_READY";
+const FRONTEND_SMOKE_CLOSE_ENV: &str = "MULTI_TZ_CLOCK_SMOKE_CLOSE_AFTER_READY";
 
 #[derive(Clone, Deserialize)]
 struct WindowPreset {
@@ -71,7 +72,7 @@ struct DesktopHostStateInner {
     is_quitting: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct FrontendSmokeReport {
     shell: Option<String>,
     platform: Option<String>,
@@ -85,6 +86,8 @@ struct FrontendSmokeReport {
 struct FrontendSmokeHostProbe {
     #[serde(rename = "isAlwaysOnTop")]
     is_always_on_top: Option<bool>,
+    #[serde(rename = "isWindowVisible")]
+    is_window_visible: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,6 +105,8 @@ struct FrontendSmokeSignal {
     is_ui_visible: Option<bool>,
     #[serde(rename = "isAlwaysOnTop")]
     is_always_on_top: Option<bool>,
+    #[serde(rename = "isWindowVisible")]
+    is_window_visible: Option<bool>,
 }
 
 impl DesktopHostState {
@@ -249,6 +254,25 @@ fn should_exit_after_frontend_ready() -> bool {
     )
 }
 
+fn should_close_after_frontend_ready() -> bool {
+    matches!(
+        std::env::var(FRONTEND_SMOKE_CLOSE_ENV).ok().as_deref(),
+        Some("1" | "true" | "TRUE" | "yes" | "YES")
+    )
+}
+
+fn capture_frontend_smoke_host_probe(
+    window: &WebviewWindow,
+) -> Result<FrontendSmokeHostProbe, String> {
+    let is_always_on_top = window.is_always_on_top().map_err(|error| error.to_string())?;
+    let is_window_visible = window.is_visible().map_err(|error| error.to_string())?;
+
+    Ok(FrontendSmokeHostProbe {
+        is_always_on_top: Some(is_always_on_top),
+        is_window_visible: Some(is_window_visible),
+    })
+}
+
 fn persist_frontend_smoke_signal(
     window_label: &str,
     report: Option<FrontendSmokeReport>,
@@ -277,6 +301,7 @@ fn persist_frontend_smoke_signal(
             .and_then(|value| value.window_preset_id.clone()),
         is_ui_visible: report.and_then(|value| value.is_ui_visible),
         is_always_on_top: host_probe.as_ref().and_then(|value| value.is_always_on_top),
+        is_window_visible: host_probe.as_ref().and_then(|value| value.is_window_visible),
     };
     let serialized = serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?;
     fs::write(&signal_path, format!("{serialized}\n")).map_err(|error| error.to_string())?;
@@ -715,16 +740,41 @@ fn desktop_report_frontend_ready(
 ) -> Result<(), String> {
     let window = get_main_window(&app).map_err(|error| error.to_string())?;
     let host_probe = if get_frontend_smoke_signal_path().is_some() {
-        let is_always_on_top = window
-            .is_always_on_top()
-            .map_err(|error| error.to_string())?;
-
-        Some(FrontendSmokeHostProbe {
-            is_always_on_top: Some(is_always_on_top),
-        })
+        Some(capture_frontend_smoke_host_probe(&window)?)
     } else {
         None
     };
+    let should_close_after_ready = should_close_after_frontend_ready();
+
+    if should_close_after_ready {
+        let app_handle = app.clone();
+        let report = report.clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_millis(150));
+            let close_app_handle = app_handle.clone();
+            let _ = app_handle.run_on_main_thread(move || {
+                if let Some(close_window) = close_app_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                    let _ = close_window.close();
+                }
+            });
+
+            thread::sleep(Duration::from_millis(300));
+            if let Ok(window) = get_main_window(&app_handle) {
+                let post_close_probe = if get_frontend_smoke_signal_path().is_some() {
+                    capture_frontend_smoke_host_probe(&window).ok()
+                } else {
+                    None
+                };
+                let _ = persist_frontend_smoke_signal(window.label(), report, post_close_probe);
+            }
+
+            thread::sleep(Duration::from_millis(200));
+            app_handle.exit(0);
+        });
+
+        return Ok(());
+    }
+
     let _ = persist_frontend_smoke_signal(window.label(), report, host_probe)?;
 
     if should_exit_after_frontend_ready() {
@@ -781,8 +831,9 @@ mod tests {
         fit_bounds_within_area, get_closest_window_preset_id,
         get_overridden_desktop_preferences_path, get_preset_bounds, get_window_preset,
         normalize_preset_id, persist_frontend_smoke_signal, read_desktop_preferences,
-        should_exit_after_frontend_ready, FrontendSmokeHostProbe, FrontendSmokeReport,
-        FrontendSmokeSignal, PersistedDesktopPreferences, DESKTOP_PREFERENCES_PATH_ENV,
+        should_close_after_frontend_ready, should_exit_after_frontend_ready,
+        FrontendSmokeHostProbe, FrontendSmokeReport, FrontendSmokeSignal,
+        PersistedDesktopPreferences, DESKTOP_PREFERENCES_PATH_ENV, FRONTEND_SMOKE_CLOSE_ENV,
         FRONTEND_SMOKE_EXIT_ENV, FRONTEND_SMOKE_SIGNAL_ENV, WINDOW_SIZE_PRESETS,
     };
     use std::fs;
@@ -988,6 +1039,7 @@ mod tests {
             }),
             Some(FrontendSmokeHostProbe {
                 is_always_on_top: Some(true),
+                is_window_visible: Some(true),
             }),
         )
         .expect("smoke signal should be written")
@@ -1005,6 +1057,7 @@ mod tests {
         assert_eq!(payload.window_preset_id.as_deref(), Some("medium"));
         assert_eq!(payload.is_ui_visible, Some(false));
         assert_eq!(payload.is_always_on_top, Some(true));
+        assert_eq!(payload.is_window_visible, Some(true));
 
         let _ = fs::remove_file(&signal_path);
         unsafe {
@@ -1031,6 +1084,28 @@ mod tests {
 
         unsafe {
             std::env::remove_var(FRONTEND_SMOKE_EXIT_ENV);
+        }
+    }
+
+    #[test]
+    fn smoke_close_flag_accepts_common_truthy_values() {
+        let _lock = ENV_LOCK
+            .lock()
+            .expect("smoke env lock should not be poisoned");
+        unsafe {
+            std::env::set_var(FRONTEND_SMOKE_CLOSE_ENV, "yes");
+        }
+
+        assert!(should_close_after_frontend_ready());
+
+        unsafe {
+            std::env::set_var(FRONTEND_SMOKE_CLOSE_ENV, "0");
+        }
+
+        assert!(!should_close_after_frontend_ready());
+
+        unsafe {
+            std::env::remove_var(FRONTEND_SMOKE_CLOSE_ENV);
         }
     }
 
