@@ -193,6 +193,7 @@ Contains pure functions used by both browser runtime and Jest tests:
 - nearest-preset snap rules
 - work-area fitting, including oversized-window edge cases
 - Run with: `npm run test:tauri`.
+- Native Windows smoke harness: `npm run test:tauri:smoke`.
 
 ## Automated Dev-Host Testing
 

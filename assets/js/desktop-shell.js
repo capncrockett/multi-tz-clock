@@ -77,6 +77,8 @@
 
   root.dataset.shell = "desktop";
 
+  void tauriCoreApi.invoke("desktop_report_frontend_ready").catch(() => {});
+
   void tauriEventApi.listen("desktop:window-size-preset-changed", function onPresetChanged(event) {
     currentPresetId = normalizePresetId(event?.payload);
     sizeListeners.forEach((listener) => listener(currentPresetId));

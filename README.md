@@ -69,6 +69,12 @@ Run the Tauri host unit tests:
 npm run test:tauri
 ```
 
+Run the native Tauri smoke harness on Windows:
+
+```bash
+npm run test:tauri:smoke
+```
+
 Run the static dev-host reliability tests:
 
 ```bash

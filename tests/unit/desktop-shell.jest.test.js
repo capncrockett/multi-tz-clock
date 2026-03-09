@@ -10,6 +10,8 @@ const desktopShellScript = fs.readFileSync(
 function loadDesktopShell(options = {}) {
   const invoke = jest.fn(options.invokeImpl || (async (commandName, args) => {
     switch (commandName) {
+      case "desktop_report_frontend_ready":
+        return null;
       case "desktop_get_window_size_preset":
         return "medium";
       case "desktop_get_ui_visibility":
@@ -85,17 +87,18 @@ describe("desktop-shell bridge", () => {
   test("invokes Tauri commands for desktop state queries and mutations", async () => {
     const result = loadDesktopShell();
 
+    expect(result.invoke).toHaveBeenNthCalledWith(1, "desktop_report_frontend_ready");
     await expect(result.desktopShell.getWindowSizePreset()).resolves.toBe("medium");
     await expect(result.desktopShell.getUiVisibility()).resolves.toBe(false);
     await expect(result.desktopShell.setWindowSizePreset("small")).resolves.toBe("small");
     await expect(result.desktopShell.setUiVisibility(true)).resolves.toBe(true);
 
-    expect(result.invoke).toHaveBeenNthCalledWith(1, "desktop_get_window_size_preset");
-    expect(result.invoke).toHaveBeenNthCalledWith(2, "desktop_get_ui_visibility");
-    expect(result.invoke).toHaveBeenNthCalledWith(3, "desktop_set_window_size_preset", {
+    expect(result.invoke).toHaveBeenNthCalledWith(2, "desktop_get_window_size_preset");
+    expect(result.invoke).toHaveBeenNthCalledWith(3, "desktop_get_ui_visibility");
+    expect(result.invoke).toHaveBeenNthCalledWith(4, "desktop_set_window_size_preset", {
       presetId: "small"
     });
-    expect(result.invoke).toHaveBeenNthCalledWith(4, "desktop_set_ui_visibility", {
+    expect(result.invoke).toHaveBeenNthCalledWith(5, "desktop_set_ui_visibility", {
       isVisible: true
     });
   });

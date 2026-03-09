@@ -19,6 +19,7 @@
     "test:unit": "jest --config jest.config.cjs tests/unit --runInBand",
     "test:integration": "jest --config jest.config.cjs tests/integration --runInBand",
     "test:tauri": "cargo test --manifest-path src-tauri\\Cargo.toml",
+    "test:tauri:smoke": "node scripts/test-tauri-smoke.cjs",
     "test:dev-host": "jest --config jest.config.cjs tests/unit/serve-static.jest.test.js --runInBand",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --grep desktop",

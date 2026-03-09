@@ -11,6 +11,7 @@ describe("package.json desktop packaging config", () => {
       "npm run test:dev-host && npm run test:tauri && npm run test:e2e:desktop"
     );
     expect(packageJson.scripts["test:tauri"]).toBe("cargo test --manifest-path src-tauri\\Cargo.toml");
+    expect(packageJson.scripts["test:tauri:smoke"]).toBe("node scripts/test-tauri-smoke.cjs");
     expect(packageJson.scripts["test:dev-host"]).toBe(
       "jest --config jest.config.cjs tests/unit/serve-static.jest.test.js --runInBand"
     );
