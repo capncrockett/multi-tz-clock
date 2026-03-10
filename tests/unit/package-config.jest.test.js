@@ -34,6 +34,20 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.scripts["test:e2e:desktop"]).toBe("playwright test --grep desktop");
   });
 
+  test("exposes explicit repo-local Vercel browser deployment scripts", () => {
+    expect(packageJson.scripts["vercel:pull:preview"]).toBe(
+      "npx vercel pull --yes --environment=preview --cwd ."
+    );
+    expect(packageJson.scripts["vercel:pull:production"]).toBe(
+      "npx vercel pull --yes --environment=production --cwd ."
+    );
+    expect(packageJson.scripts["vercel:build"]).toBe("npx vercel build --cwd .");
+    expect(packageJson.scripts["vercel:deploy:preview"]).toBe("npx vercel deploy --prebuilt --cwd .");
+    expect(packageJson.scripts["vercel:deploy:production"]).toBe(
+      "npx vercel deploy --prebuilt --prod --cwd ."
+    );
+  });
+
   test("removes the Electron desktop packaging config", () => {
     expect(packageJson.productName).toBe("Multi-TZ Clock");
     expect(packageJson.build).toBeUndefined();

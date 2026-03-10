@@ -28,7 +28,12 @@
     "guard:pre-commit": "node scripts/agent-guard.cjs pre-commit",
     "guard:pre-push": "node scripts/agent-guard.cjs pre-push",
     "guard:commit-msg": "node scripts/agent-guard.cjs commit-msg",
-    "hooks:install": "node scripts/install-hooks.cjs"
+    "hooks:install": "node scripts/install-hooks.cjs",
+    "vercel:pull:preview": "npx vercel pull --yes --environment=preview --cwd .",
+    "vercel:pull:production": "npx vercel pull --yes --environment=production --cwd .",
+    "vercel:build": "npx vercel build --cwd .",
+    "vercel:deploy:preview": "npx vercel deploy --prebuilt --cwd .",
+    "vercel:deploy:production": "npx vercel deploy --prebuilt --prod --cwd ."
   },
   "repository": {
     "type": "git",

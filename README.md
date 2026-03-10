@@ -111,6 +111,24 @@ GitHub Actions CI now lives in `.github/workflows/ci.yml` and stays repo-local:
 - desktop proof runs `npm run test:desktop:proof` on Windows
 - workflow commands execute only against this repository checkout
 
+## Browser Deploy
+
+The browser app can deploy to Vercel as a static site without changing the browser-first architecture.
+
+- `.vercel/` stays local and is ignored by git
+- `.vercelignore` keeps desktop host files, tests, and repo-only tooling out of browser deploy uploads
+- `.github/workflows/vercel-browser.yml` uses repo-local commands plus this repo's `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets
+- if those secrets are missing, the workflow exits cleanly without touching any other project
+
+Useful repo-local Vercel commands:
+
+```bash
+npm run vercel:pull:preview -- --token <token>
+npm run vercel:build -- --token <token>
+npm run vercel:deploy:preview -- --token <token>
+npm run vercel:deploy:production -- --token <token>
+```
+
 Useful variants:
 
 - `npm run test:e2e:headed` - run tests with a visible browser
