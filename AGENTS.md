@@ -27,6 +27,12 @@ Do not carry uncommitted work from one user prompt into the next. If the topic p
 - If tests fail, fix the issue or revert the broken work before handing control back.
 - If a prompt expands beyond the original scope, checkpoint the current work in a commit before continuing.
 
+## Repo Scope
+
+- Operate only within this repository.
+- Do not inspect, modify, configure, release, or push any other repository as part of work here.
+- CI/CD workflows, hooks, scripts, and any `gh` usage must target this repository only and run repo-local commands from this repo root.
+
 ## Commit Rules
 
 - Use a conventional-style commit message: `feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`, `test: ...`, `chore: ...`, `build: ...`, `ci: ...`, or `revert: ...`.

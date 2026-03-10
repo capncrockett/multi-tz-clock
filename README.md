@@ -105,6 +105,12 @@ Run all suites:
 npm test
 ```
 
+GitHub Actions CI now lives in `.github/workflows/ci.yml` and stays repo-local:
+
+- browser verification runs `npm test` on Ubuntu
+- desktop proof runs `npm run test:desktop:proof` on Windows
+- workflow commands execute only against this repository checkout
+
 Useful variants:
 
 - `npm run test:e2e:headed` - run tests with a visible browser
@@ -121,6 +127,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - Non-doc commits run the full test suite before commit
 - Pushes are blocked unless the working tree is clean and tests pass
 - Commit messages must use a conventional format such as `fix(clock): adjust hand spacing`
+- Guard scripts and CI workflow are scoped to this repository only
 
 ## File Layout
 

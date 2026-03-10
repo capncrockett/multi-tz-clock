@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// This guard is intentionally repo-local and must only operate against the
+// repository that contains this script.
+
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync, spawnSync } = require("node:child_process");
@@ -38,6 +41,17 @@ function run(command, args) {
 function fail(message) {
   console.error(`agent-guard: ${message}`);
   process.exit(1);
+}
+
+function ensureRepoLocalScope() {
+  try {
+    const topLevel = git(["rev-parse", "--show-toplevel"]);
+    if (path.resolve(topLevel) !== repoRoot) {
+      fail(`guard scope mismatch: expected ${repoRoot}, received ${topLevel}`);
+    }
+  } catch (error) {
+    fail(`guard must run inside this repository only (${error.message || error})`);
+  }
 }
 
 function getLines(value) {
@@ -154,12 +168,15 @@ function handleCommitMessage() {
 
 switch (mode) {
   case "pre-commit":
+    ensureRepoLocalScope();
     handlePreCommit();
     break;
   case "pre-push":
+    ensureRepoLocalScope();
     handlePrePush();
     break;
   case "commit-msg":
+    ensureRepoLocalScope();
     handleCommitMessage();
     break;
   default:
