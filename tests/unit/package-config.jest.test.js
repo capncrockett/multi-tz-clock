@@ -12,11 +12,9 @@ const packageLock = JSON.parse(
 );
 
 describe("package.json desktop packaging config", () => {
-  test("exposes Tauri-first desktop scripts", () => {
+  test("exposes the canonical desktop scripts", () => {
     expect(packageJson.scripts["desktop:dev"]).toBe("node scripts/start-tauri-dev.cjs");
     expect(packageJson.scripts["desktop:build"]).toBe("tauri build");
-    expect(packageJson.scripts["desktop:tauri:dev"]).toBe("npm run desktop:dev");
-    expect(packageJson.scripts["desktop:tauri:build"]).toBe("npm run desktop:build");
   });
 
   test("exposes explicit desktop-host test scripts", () => {

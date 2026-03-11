@@ -157,7 +157,7 @@ async function main() {
     return;
   }
 
-  await runCommand("cmd.exe", ["/d", "/s", "/c", "npm run desktop:tauri:build"]);
+  await runCommand("cmd.exe", ["/d", "/s", "/c", "npm run desktop:build"]);
 
   const smokeDir = await fs.mkdtemp(path.join(os.tmpdir(), "multi-tz-clock-tauri-smoke-"));
   const signalPath = path.join(smokeDir, "frontend-ready.json");

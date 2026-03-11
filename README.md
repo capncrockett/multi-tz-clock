@@ -20,8 +20,6 @@ Build the Tauri desktop host:
 npm run desktop:build
 ```
 
-The legacy `desktop:tauri:dev` and `desktop:tauri:build` aliases still point at these same commands.
-
 ## Automated Testing
 
 Install dependencies and browser once:

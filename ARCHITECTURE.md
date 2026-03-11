@@ -92,7 +92,6 @@ Contains these logical sections:
 
 - `npm run desktop:dev` uses `scripts/start-tauri-dev.cjs` to start or reuse the static frontend server, then launches the Tauri host.
 - `npm run desktop:build` stages `index.html` + `assets/` into `.tauri-dist/` and builds the Tauri host.
-- `npm run desktop:tauri:dev` and `npm run desktop:tauri:build` remain as compatibility aliases.
 
 ### `assets/js/desktop-shell.js`
 Contains the desktop-shell bridge used by Tauri:

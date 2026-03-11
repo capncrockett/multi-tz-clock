@@ -6,8 +6,6 @@
   "scripts": {
     "desktop:dev": "node scripts/start-tauri-dev.cjs",
     "desktop:build": "tauri build",
-    "desktop:tauri:dev": "npm run desktop:dev",
-    "desktop:tauri:build": "npm run desktop:build",
     "tauri": "tauri",
     "prepare": "node scripts/install-hooks.cjs",
     "test": "npm run test:all",
