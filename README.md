@@ -61,11 +61,11 @@ npm run test:tauri:smoke
 
 This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected host state, including native always-on-top state, close-to-tray interception, restore visibility after a smoke close cycle, launch-on-startup state, and persisted host preferences.
 
-Remaining native checks that are still reasonable to do manually in under 30 seconds:
+Remaining native checks now live in [desktop/RELEASE-CHECKLIST.md](desktop/RELEASE-CHECKLIST.md):
 
-- open `npm run desktop:dev`
-- left-click the tray icon once to hide the window and once to restore it
-- visually confirm the frameless transparent window still looks correct on your desktop
+- run `npm run test:desktop:proof`
+- run `npm run desktop:dev`
+- complete the short tray/visual release pass in the checklist
 
 Run the static dev-host reliability tests:
 
@@ -145,6 +145,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 - `assets/js/desktop-shell.js` - Browser-safe bridge that maps Tauri onto the existing desktop renderer contract
 - `assets/js/app.js` - App logic, rendering, time math, and interactions
 - `desktop/window-presets.json` - Shared desktop preset definitions consumed by the Tauri host
+- `desktop/RELEASE-CHECKLIST.md` - Short manual desktop release pass after automated proof succeeds
 - `scripts/start-tauri-dev.cjs` - Tauri dev wrapper that owns frontend-server lifecycle
 - `scripts/serve-static.cjs` - Static dev server for Tauri against the existing browser frontend
 - `scripts/prepare-tauri-dist.cjs` - Copies `index.html` + `assets/` into a minimal Tauri frontend bundle
@@ -168,8 +169,7 @@ This repo now includes strict agent guard rails in `AGENTS.md` plus local git ho
 
 Still pending for Phase 2:
 
-- Keep expanding native-host verification where it is reliable and fast
-- Finish the short manual smoke pass for tray click restore, close-to-tray, and visual polish as part of desktop release readiness
+- Run [desktop/RELEASE-CHECKLIST.md](desktop/RELEASE-CHECKLIST.md) before calling the desktop host release-ready
 
 Platform direction:
 

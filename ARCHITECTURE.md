@@ -18,6 +18,7 @@ assets/js/clock-utils.js - Shared pure layout, timezone-grouping, and nearest-ci
 assets/js/desktop-shell.js - Browser-safe desktop bridge that maps Tauri onto the existing renderer contract
 assets/js/app.js     - All runtime logic (state, time math, rendering, interactions)
 desktop/window-presets.json - Shared desktop size presets consumed by the Tauri host and tests
+desktop/RELEASE-CHECKLIST.md - Short manual desktop release pass after automated proof succeeds
 scripts/start-tauri-dev.cjs - Tauri dev wrapper that owns static-server lifecycle
 scripts/serve-static.cjs - Static file server used by `tauri dev` against the existing browser app
 scripts/prepare-tauri-dist.cjs - Copies `index.html` + `assets/` into a minimal frontend folder for Tauri builds
@@ -231,4 +232,4 @@ Current Tauri spike boundary:
 - Shared desktop window preset definitions live in `desktop/window-presets.json`
 - Tauri now handles the thin window host boundary plus tray-driven window visibility, UI visibility, always-on-top state, launch-on-startup, hide-on-close behavior, local host preference persistence, and preset snap/work-area fitting behavior
 - Tauri host preferences currently live in a JSON file under the app config directory, separate from browser `localStorage` / IndexedDB state
-- The main remaining desktop work is broader native-host verification and release-readiness polish
+- The only remaining desktop work in-repo is running the short manual release checklist and fixing anything it exposes

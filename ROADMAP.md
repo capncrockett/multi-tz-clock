@@ -21,7 +21,7 @@ Unlike typical world clock apps that show multiple separate dials, this project 
   - local storage persistence is shipped
   - geolocation-based local timezone detection is shipped
   - sub-hour timezone precision edge-case handling is shipped
-- Phase 2 desktop packaging is now centered on the Tauri host in this repo.
+- Phase 2 desktop packaging is now centered on the Tauri host in this repo, with only the short manual release checklist still outstanding before calling it release-ready.
 - Phase 3 through Phase 5 have not started yet.
 
 ---
@@ -92,8 +92,7 @@ Shipped in this checkpoint:
 
 Still pending in Phase 2:
 
-- Keep expanding directed native-host verification where it is reliable and fast
-- Finish the short manual desktop release pass around tray restore, close-to-tray, and visual polish
+- Run `desktop/RELEASE-CHECKLIST.md` as the final manual release pass for tray behavior and visual polish
 
 ---
 
