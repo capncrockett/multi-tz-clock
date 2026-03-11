@@ -59,7 +59,7 @@ Run the native Tauri smoke harness on Windows:
 npm run test:tauri:smoke
 ```
 
-This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected host state, including native always-on-top state, close-to-tray interception, and persisted host preferences.
+This builds the release app, launches the real Windows executable, and verifies that the frontend reports a live desktop shell plus the expected host state, including native always-on-top state, close-to-tray interception, restore visibility after a smoke close cycle, launch-on-startup state, and persisted host preferences.
 
 Remaining native checks that are still reasonable to do manually in under 30 seconds:
 
