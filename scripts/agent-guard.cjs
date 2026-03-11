@@ -10,12 +10,6 @@ const { execFileSync, spawnSync } = require("node:child_process");
 const repoRoot = path.resolve(__dirname, "..");
 process.chdir(repoRoot);
 
-const mode = process.argv[2];
-
-if (!mode) {
-  fail("Usage: node scripts/agent-guard.cjs <pre-commit|pre-push|commit-msg> [args]");
-}
-
 function git(args) {
   return execFileSync("git", args, {
     cwd: repoRoot,
@@ -24,10 +18,29 @@ function git(args) {
   }).trim();
 }
 
+function quoteCmdArg(value) {
+  if (value === "") return '""';
+  if (!/[\s"]/u.test(value)) return value;
+  return `"${String(value).replace(/"/g, '\\"')}"`;
+}
+
+function resolveRunTarget(command, args, platform = process.platform) {
+  if (platform === "win32") {
+    const cmdLine = [command, ...args].map(quoteCmdArg).join(" ");
+    return {
+      command: process.env.comspec || "cmd.exe",
+      args: ["/d", "/s", "/c", cmdLine],
+    };
+  }
+
+  return { command, args };
+}
+
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const target = resolveRunTarget(command, args);
+  const result = spawnSync(target.command, target.args, {
     cwd: repoRoot,
-    shell: process.platform === "win32",
+    shell: false,
     stdio: "inherit",
   });
 
@@ -166,19 +179,36 @@ function handleCommitMessage() {
   }
 }
 
-switch (mode) {
-  case "pre-commit":
-    ensureRepoLocalScope();
-    handlePreCommit();
-    break;
-  case "pre-push":
-    ensureRepoLocalScope();
-    handlePrePush();
-    break;
-  case "commit-msg":
-    ensureRepoLocalScope();
-    handleCommitMessage();
-    break;
-  default:
-    fail(`unknown mode '${mode}'`);
+function main(argv = process.argv) {
+  const mode = argv[2];
+
+  if (!mode) {
+    fail("Usage: node scripts/agent-guard.cjs <pre-commit|pre-push|commit-msg> [args]");
+  }
+
+  switch (mode) {
+    case "pre-commit":
+      ensureRepoLocalScope();
+      handlePreCommit();
+      break;
+    case "pre-push":
+      ensureRepoLocalScope();
+      handlePrePush();
+      break;
+    case "commit-msg":
+      ensureRepoLocalScope();
+      handleCommitMessage();
+      break;
+    default:
+      fail(`unknown mode '${mode}'`);
+  }
 }
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  main,
+  resolveRunTarget,
+};
