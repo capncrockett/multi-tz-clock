@@ -32,7 +32,7 @@ Do not carry uncommitted work from one user prompt into the next. If the topic p
 - Operate only within this repository.
 - Do not inspect, modify, configure, release, or push any other repository as part of work here.
 - CI/CD workflows, hooks, scripts, and any `gh` usage must target this repository only and run repo-local commands from this repo root.
-- Vercel commands must be scoped to this repository only; keep `.vercel/` local and uncommitted.
+- Any Vercel CLI usage must be scoped to this repository only; prefer Vercel's native Git integration over repo-driven deploy scripts and keep `.vercel/` local and uncommitted.
 
 ## Commit Rules
 

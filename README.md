@@ -113,21 +113,12 @@ GitHub Actions CI now lives in `.github/workflows/ci.yml` and stays repo-local:
 
 ## Browser Deploy
 
-The browser app can deploy to Vercel as a static site without changing the browser-first architecture.
+The browser app deploys through Vercel's native Git integration rather than a GitHub Actions CLI workflow.
 
-- `.vercel/` stays local and is ignored by git
-- `.vercelignore` keeps desktop host files, tests, and repo-only tooling out of browser deploy uploads
-- `.github/workflows/vercel-browser.yml` uses repo-local commands plus this repo's `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets
-- if those secrets are missing, the workflow exits cleanly without touching any other project
-
-Useful repo-local Vercel commands:
-
-```bash
-npm run vercel:pull:preview -- --token <token>
-npm run vercel:build -- --token <token>
-npm run vercel:deploy:preview -- --token <token>
-npm run vercel:deploy:production -- --token <token>
-```
+- connect this repository to the `multi-tz-clock` Vercel project
+- let Vercel create preview deploys for pull requests and production deploys from `main`
+- keep `.vercel/` local and ignored by git if you use the Vercel CLI for repo-local linking or debugging
+- keep GitHub Actions focused on verification while Vercel owns browser deployment
 
 Useful variants:
 

@@ -34,18 +34,12 @@ describe("package.json desktop packaging config", () => {
     expect(packageJson.scripts["test:e2e:desktop"]).toBe("playwright test --grep desktop");
   });
 
-  test("exposes explicit repo-local Vercel browser deployment scripts", () => {
-    expect(packageJson.scripts["vercel:pull:preview"]).toBe(
-      "npx vercel pull --yes --environment=preview --cwd ."
-    );
-    expect(packageJson.scripts["vercel:pull:production"]).toBe(
-      "npx vercel pull --yes --environment=production --cwd ."
-    );
-    expect(packageJson.scripts["vercel:build"]).toBe("npx vercel build --cwd .");
-    expect(packageJson.scripts["vercel:deploy:preview"]).toBe("npx vercel deploy --prebuilt --cwd .");
-    expect(packageJson.scripts["vercel:deploy:production"]).toBe(
-      "npx vercel deploy --prebuilt --prod --cwd ."
-    );
+  test("keeps browser deploys on Vercel native git integration instead of npm CLI scripts", () => {
+    expect(packageJson.scripts["vercel:pull:preview"]).toBeUndefined();
+    expect(packageJson.scripts["vercel:pull:production"]).toBeUndefined();
+    expect(packageJson.scripts["vercel:build"]).toBeUndefined();
+    expect(packageJson.scripts["vercel:deploy:preview"]).toBeUndefined();
+    expect(packageJson.scripts["vercel:deploy:production"]).toBeUndefined();
   });
 
   test("removes the Electron desktop packaging config", () => {
