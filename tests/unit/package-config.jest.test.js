@@ -42,6 +42,7 @@ describe("package.json desktop packaging config", () => {
 
   test("removes the Electron desktop packaging config", () => {
     expect(packageJson.productName).toBe("Multi-TZ Clock");
+    expect(packageJson.license).toBe("MIT");
     expect(packageJson.build).toBeUndefined();
     expect(packageJson.devDependencies.electron).toBeUndefined();
     expect(packageJson.devDependencies["electron-builder"]).toBeUndefined();
