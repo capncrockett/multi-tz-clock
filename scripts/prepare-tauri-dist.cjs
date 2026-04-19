@@ -5,7 +5,14 @@ const repoRoot = path.resolve(__dirname, "..");
 const outputDir = path.join(repoRoot, ".tauri-dist");
 const entriesToCopy = [
   { from: path.join(repoRoot, "index.html"), to: path.join(outputDir, "index.html") },
-  { from: path.join(repoRoot, "assets"), to: path.join(outputDir, "assets") }
+  { from: path.join(repoRoot, "assets"), to: path.join(outputDir, "assets") },
+  { from: path.join(repoRoot, "android-chrome-192x192.png"), to: path.join(outputDir, "android-chrome-192x192.png") },
+  { from: path.join(repoRoot, "android-chrome-512x512.png"), to: path.join(outputDir, "android-chrome-512x512.png") },
+  { from: path.join(repoRoot, "apple-touch-icon.png"), to: path.join(outputDir, "apple-touch-icon.png") },
+  { from: path.join(repoRoot, "favicon-16x16.png"), to: path.join(outputDir, "favicon-16x16.png") },
+  { from: path.join(repoRoot, "favicon-32x32.png"), to: path.join(outputDir, "favicon-32x32.png") },
+  { from: path.join(repoRoot, "favicon.ico"), to: path.join(outputDir, "favicon.ico") },
+  { from: path.join(repoRoot, "site.webmanifest"), to: path.join(outputDir, "site.webmanifest") }
 ];
 
 function copyEntry(sourcePath, destinationPath) {
